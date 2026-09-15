@@ -1,0 +1,13 @@
+# Mount plain-slides into a DSH profile.
+#
+# Append this row to the patch layer at:
+#     ~/.dsh/profiles/<profile>/cordis.patch.yml
+# (for the web UI the profile is normally `web`).
+#
+# Do NOT edit cordis.yml — it is regenerated from the bundles; the patch layer
+# is the file meant to be edited. `dsh --dump-config` prints the composed tree
+# so you can confirm the row landed before starting a session.
+
+- insert:
+    - id: plain-slides
+      name: 'dsh-plugin-plain-slides'

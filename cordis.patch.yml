@@ -1,0 +1,13 @@
+# plain-slides bundle patch.
+#
+# Declared by package.json's `dsh.bundle.patch`, so `dsh plugin --profile <p>
+# add <this-package>` appends this package to the profile's
+# `dsh.profile.bundles` and this layer is applied automatically — the user
+# never edits cordis.yml or cordis.patch.yml by hand.
+#
+# A patch layer is a top-level YAML array of loader patch entries. With no
+# `id`, `insert` appends to the profile root entry list.
+
+- insert:
+    - id: plain-slides
+      name: 'dsh-plugin-plain-slides'

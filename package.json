@@ -1,0 +1,64 @@
+{
+  "name": "dsh-plugin-plain-slides",
+  "version": "0.1.0",
+  "description": "Turn each agent reply into a plain-language slide deck instead of a wall of technical markdown. A DeepSeek Harness plugin for people who do not read code.",
+  "license": "MIT",
+  "author": "dangxinxing090-svg",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dangxinxing090-svg/dsh-plugin-plain-slides.git"
+  },
+  "homepage": "https://github.com/dangxinxing090-svg/dsh-plugin-plain-slides#readme",
+  "bugs": {
+    "url": "https://github.com/dangxinxing090-svg/dsh-plugin-plain-slides/issues"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": {
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "default": "./lib/client.js"
+    },
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-chat",
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-renderer"
+      ]
+    }
+  },
+  "files": [
+    "lib/index.js",
+    "lib/client.js",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "slides",
+    "accessibility",
+    "plain-language"
+  ],
+  "scripts": {
+    "test": "node test/host.test.mjs && node test/client.test.mjs"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.2"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
