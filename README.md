@@ -27,12 +27,20 @@ Nothing is deleted. The button in the card header switches to the full original 
 On a machine with DeepSeek Harness (`dsh`) installed:
 
 ```sh
+dsh plugin --profile web add github:dangxinxing090-svg/dsh-plugin-plain-slides
+```
+
+This installs straight from this repository, and it works today — the package is not on npm yet.
+
+Once it is published to npm, the shorter name resolves too:
+
+```sh
 dsh plugin --profile web add dsh-plugin-plain-slides
 ```
 
 Restart `dsh`. That is the whole install — the package mounts itself, so there is no config file to edit.
 
-Replace `web` with your profile name (`tui` is the other common one).
+Replace `web` with your profile name (`tui` is the other common one). To pin a release instead of tracking the default branch, append a tag or commit: `github:dangxinxing090-svg/dsh-plugin-plain-slides#v0.1.0`.
 
 <details>
 <summary>Manual install</summary>
@@ -41,7 +49,7 @@ Replace `web` with your profile name (`tui` is the other common one).
 
    ```sh
    cd ~/.dsh/profiles/web
-   pnpm add dsh-plugin-plain-slides
+   pnpm add github:dangxinxing090-svg/dsh-plugin-plain-slides
    ```
 
 2. Append to `cordis.patch.yml` in the same directory:
@@ -186,12 +194,20 @@ AI 干完活，吐出一大段文字：文件名、代码、术语、括号、�
 在装了 DeepSeek Harness（`dsh`）的机器上执行：
 
 ```sh
+dsh plugin --profile web add github:dangxinxing090-svg/dsh-plugin-plain-slides
+```
+
+这是直接从本仓库安装，**现在就能用**——这个包还没发布到 npm。
+
+等它发布到 npm 之后，短名字也成立：
+
+```sh
 dsh plugin --profile web add dsh-plugin-plain-slides
 ```
 
 然后重启 `dsh`。安装就这一步——包会自己挂载自己，不需要改任何配置文件。
 
-把 `web` 换成你实际用的 profile 名（另一个常见的是 `tui`）。
+把 `web` 换成你实际用的 profile 名（另一个常见的是 `tui`）。想锁定某个版本而不是跟随默认分支，在末尾加上 tag 或 commit：`github:dangxinxing090-svg/dsh-plugin-plain-slides#v0.1.0`。
 
 <details>
 <summary>手动安装</summary>
@@ -200,7 +216,7 @@ dsh plugin --profile web add dsh-plugin-plain-slides
 
    ```sh
    cd ~/.dsh/profiles/web
-   pnpm add dsh-plugin-plain-slides
+   pnpm add github:dangxinxing090-svg/dsh-plugin-plain-slides
    ```
 
 2. 在同目录的 `cordis.patch.yml` 里追加：
