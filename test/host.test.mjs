@@ -157,6 +157,67 @@ const failedCall = await routes[0].fetch(post(JSON.stringify({ text: 'x' })))
 const failedBody = await failedCall.json()
 check('model failure reports ok:false', failedBody.ok === false, JSON.stringify(failedBody).slice(0, 120))
 
+// ---- output budget ---------------------------------------------------------
+// A reasoning model can spend an entire output cap on reasoning and still
+// finish cleanly, yielding zero text. That is what silently degraded this
+// plugin to its local fallback: maxTokens 1200 produced no text at all.
+
+check('the rewrite asks for a real output budget', seenOptions.maxTokens >= 8000, String(seenOptions.maxTokens))
+
+routes.length = 0
+let calls = 0
+const budgets = []
+apply(
+  makeCtx({
+    llm: {
+      stream(options) {
+        calls += 1
+        budgets.push(options.maxTokens)
+        return (async function* generate() {
+          if (calls === 1) {
+            yield { type: 'finish', reason: { kind: 'max-tokens' } }
+            return
+          }
+          yield { type: 'text-delta', index: 0, text: 'RESULT: 重试之后有正文了\n' }
+          yield { type: 'finish', reason: { kind: 'stop' } }
+        })()
+      },
+    },
+  }),
+)
+const retried = await routes[0].fetch(post(JSON.stringify({ text: '一段较长的输入' })))
+const retriedBody = await retried.json()
+check('an empty first answer is retried', calls === 2, 'calls=' + calls)
+check('the retry doubles the budget', budgets[1] === budgets[0] * 2, budgets.join(' -> '))
+check(
+  'the retry result is the one returned',
+  retriedBody.ok === true && /重试之后有正文了/.test(retriedBody.text),
+  JSON.stringify(retriedBody).slice(0, 120),
+)
+
+routes.length = 0
+calls = 0
+apply(
+  makeCtx({
+    llm: {
+      stream() {
+        calls += 1
+        return (async function* generate() {
+          yield { type: 'finish', reason: { kind: 'max-tokens' } }
+        })()
+      },
+    },
+  }),
+)
+const twiceEmpty = await routes[0].fetch(post(JSON.stringify({ text: 'x' })))
+const twiceEmptyBody = await twiceEmpty.json()
+check('it retries only once', calls === 2, 'calls=' + calls)
+check(
+  'a still-empty answer names the finish reason',
+  twiceEmptyBody.ok === false && /max-tokens/.test(String(twiceEmptyBody.message)),
+  JSON.stringify(twiceEmptyBody),
+)
+
 // Without the connection service the plugin must stay inert, not throw.
 routes.length = 0
 const inert = await import('../lib/index.js')
