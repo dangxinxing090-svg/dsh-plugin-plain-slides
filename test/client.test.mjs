@@ -60,7 +60,7 @@ const fakeSlots = {
     return () => {}
   },
   register(options, Component) {
-    registered.push({ options, isComponent: typeof Component === 'function' })
+    registered.push({ options, isComponent: typeof Component === 'function', component: Component })
     return () => {}
   },
 }
@@ -81,14 +81,16 @@ const fakeClientCtx = {
 
 moduleExports.apply(fakeClientCtx)
 
+const injectedKeys = [...new Set(injected)]
 check(
-  'injects the three slot keys',
-  injected.length === 3 &&
-    injected.includes('conversation.chat.node') &&
-    injected.includes('conversation.chat.assistant-actions') &&
-    injected.includes('shell.overlay'),
-  injected.join(', '),
+  'injects exactly the three slot keys',
+  injectedKeys.length === 3 &&
+    injectedKeys.includes('conversation.chat.node') &&
+    injectedKeys.includes('conversation.chat.assistant-actions') &&
+    injectedKeys.includes('shell.overlay'),
+  injectedKeys.join(', '),
 )
+check('one injection per registration', injected.length === 11, 'injections=' + injected.length)
 
 const byKey = (predicate) => registered.find((entry) => predicate(entry.options))
 const nodeEntry = byKey((o) => o.key === 'assistant-step')
@@ -108,9 +110,110 @@ check(
   actionEntry && String(actionEntry.options.order),
 )
 check('registers the shell overlay', overlayEntry !== undefined && overlayEntry.isComponent)
-check('total registrations is three', registered.length === 3, 'registered=' + registered.length)
+check('all registered entries carry a component', registered.every((entry) => entry.isComponent))
 
-check('all three entries carry a component', registered.every((entry) => entry.isComponent))
+// ---- the working process never reaches the transcript ----------------------
+
+const HIDDEN_KINDS = [
+  'turn-process',
+  'tool-call',
+  'context',
+  'compaction',
+  'model-retry',
+  'unknown',
+  'workflow-run',
+  'system-prompt',
+]
+const nodeEntries = registered.filter(
+  (entry) => entry.options.name === 'conversation.chat.node' && entry.options.key !== 'assistant-step',
+)
+const renderedKeys = nodeEntries.map((entry) => entry.options.key)
+check(
+  'every process kind is taken over',
+  HIDDEN_KINDS.every((kind) => renderedKeys.includes(kind)),
+  renderedKeys.join(', '),
+)
+check(
+  'every process renderer renders nothing',
+  nodeEntries.length === HIDDEN_KINDS.length && nodeEntries.every((entry) => entry.component({}) === null),
+  'entries=' + nodeEntries.length,
+)
+check(
+  'failures stay visible',
+  !renderedKeys.includes('turn-error') && !renderedKeys.includes('turn-max-tokens'),
+  renderedKeys.join(', '),
+)
+check('the turn footer stays visible', !renderedKeys.includes('turn-tail'))
+check('the user keeps their own voice', !renderedKeys.includes('user') && !renderedKeys.includes('steering'))
+check('total registrations matches the declared set', registered.length === 11, 'registered=' + registered.length)
+
+// ---- running and mid-turn assistant steps ----------------------------------
+
+const WAITING = '正在处理，有结果了第一时间给您汇报'
+const stepEntry = registered.find((entry) => entry.options.key === 'assistant-step')
+
+function snapshotWith(keys, byKey) {
+  return {
+    order: keys,
+    nodes: { get: (key) => byKey[key] },
+    locations: { getTurn: () => keys },
+    navigation: { items: () => [] },
+    timeline: { turns: new Map() },
+  }
+}
+
+function renderStep(node, snapshot) {
+  return stepEntry.component({
+    node,
+    useChat: (selector) => selector(snapshot),
+    useInput: (selector) => selector({ draft: '' }),
+  })
+}
+
+function textOf(element) {
+  if (element === null || element === undefined) return ''
+  if (typeof element === 'string') return element
+  if (typeof element === 'number') return String(element)
+  if (typeof element === 'function') return textOf(element({}))
+  if (typeof element.type === 'function') return textOf(element.type(element.props || {}))
+  let out = ''
+  const children = element.children || []
+  for (const child of children) out += ' ' + textOf(child)
+  return out
+}
+
+const firstStep = {
+  key: 'k1',
+  kind: 'assistant-step',
+  anchorSeq: 1,
+  location: { kind: 'turn', turn: { turn: 3 } },
+  data: { status: 'running', step: 1, blocks: [{ kind: 'text', text: 'working' }] },
+}
+const lastStep = { ...firstStep, key: 'k2', anchorSeq: 2 }
+const runningSnapshot = snapshotWith(['k1', 'k2'], { k1: firstStep, k2: lastStep })
+
+check('an earlier running step shows nothing', renderStep(firstStep, runningSnapshot) === null)
+const waitingTree = textOf(renderStep(lastStep, runningSnapshot))
+check('the last running step shows the placeholder', waitingTree.includes(WAITING), waitingTree.trim().slice(0, 80))
+check('the placeholder is the only thing shown', waitingTree.trim() === WAITING, waitingTree.trim())
+
+const midStep = {
+  key: 'k3',
+  kind: 'assistant-step',
+  anchorSeq: 5,
+  location: { kind: 'turn', turn: { turn: 4 } },
+  data: { status: 'settled', step: 1, blocks: [{ kind: 'text', text: 'mid-turn narration' }], finalNode: { seq: 5 } },
+}
+const tailNode = {
+  key: 'k4',
+  kind: 'turn-tail',
+  anchorSeq: 10,
+  data: { turn: 4, seq: 10, time: 0, closing: { finalNode: { seq: 99 } } },
+}
+check(
+  'a settled mid-turn step shows nothing',
+  renderStep(midStep, snapshotWith(['k3', 'k4'], { k3: midStep, k4: tailNode })) === null,
+)
 
 // ---- tool-name glossary ----------------------------------------------------
 
