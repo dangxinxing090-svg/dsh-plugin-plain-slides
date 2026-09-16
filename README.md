@@ -94,6 +94,25 @@ The fallback never blanks the card and never shows broken markup.
 
 ---
 
+## What the conversation itself shows
+
+The card is only half of it. The plugin also tidies the transcript around it, so
+you are not scrolling past the agent's homework to find the answer:
+
+| In the transcript | What you see |
+| --- | --- |
+| While a turn is running | one calm line — `正在处理，有结果了第一时间给您汇报` — instead of streaming narration |
+| When the turn settles | your message, then the deck |
+| Reasoning, tool folds, injected context, compaction markers, retries, the system prompt | nothing at all |
+| Failures and truncation (`turn-error`, `turn-max-tokens`) | **kept** — you always learn when something went wrong |
+| Interactive tool cards | **kept** — approvals, plan review and questions still work normally |
+| Everything hidden above | still in the Trajectory view, one click away |
+
+Nothing is deleted. The plugin changes what is *shown by default*, not what is
+recorded.
+
+---
+
 ## Cost
 
 Each reply costs **one extra model call** to translate the technical content.
@@ -106,11 +125,12 @@ Each reply costs **one extra model call** to translate the technical content.
 
 ## How it works
 
-Three parts:
+Four parts:
 
 1. **It takes over the reply renderer.** The plugin registers into the harness's assistant-message seat, so the raw markdown is no longer rendered directly — the slide card is.
-2. **One rewrite call.** When a turn settles, the plugin sends that text to your model with a strict instruction: emit HTML fragments in a fixed line protocol — one conclusion, a few process steps.
-3. **A local fallback.** If that call fails or times out, the client splits the original text itself with a small markdown → HTML converter. Correct layout, unprocessed wording.
+2. **It takes over the working-process renderers.** The same seat is keyed by message kind, so the plugin also claims reasoning folds, injected context, compaction markers, retries and the system prompt, and renders them as nothing. The kinds it must not claim are the ones carrying interactive UI.
+3. **One rewrite call.** When a turn settles, the plugin sends that text to your model with a strict instruction: emit HTML fragments in a fixed line protocol — one conclusion, a few process steps.
+4. **A local fallback.** If that call fails or times out, the client splits the original text itself with a small markdown → HTML converter. Correct layout, unprocessed wording.
 
 The client half talks to its host half over Connection's authenticated `/api` fetch channel (`ctx.connection.fetch.register`), so the harness applies its Host/Origin trust fence and browser-session cookie before the handler runs. The plugin implements no authentication of its own.
 
@@ -261,6 +281,23 @@ dsh plugin --profile web remove dsh-plugin-plain-slides
 
 ---
 
+## 对话里还剩什么
+
+卡片只是一半。插件同时会把对话本身整理干净，你不用翻过一堆"作业"才能看到答案：
+
+| 对话里的位置 | 你会看到 |
+| --- | --- |
+| 一轮正在进行时 | 只有一行平静的提示 —— 正在处理，有结果了第一时间给您汇报 —— 而不是不断刷新的自述 |
+| 一轮结束时 | 你的消息，然后是幻灯片 |
+| 思考过程、工具折叠、注入的上下文、压缩标记、重试、系统提示 | 完全不显示 |
+| 失败与截断（`turn-error`、`turn-max-tokens`） | **保留** —— 出了问题一定会告诉你 |
+| 需要你动手的卡片 | **保留** —— 授权、计划确认、提问都照常工作 |
+| 上面被隐藏的内容 | 都在"轨迹"视图里，点一下就能看 |
+
+什么都没删。插件改变的是**默认显示什么**，不是记录什么。
+
+---
+
 ## 花多少钱
 
 每一轮回答会**多出一次模型调用**，用来把技术内容翻译成大白话。
@@ -273,11 +310,12 @@ dsh plugin --profile web remove dsh-plugin-plain-slides
 
 ## 它是怎么工作的
 
-三个部件：
+四个部件：
 
 1. **接管回答的渲染位。** 插件注册进 harness 的"助手消息渲染位"，所以原始 markdown 不再直接渲染——由幻灯片卡取代。
-2. **一次改写调用。** 一轮结束后，插件把那段文字交给你的模型，要求严格按固定行协议输出 HTML 片段：一句结论、若干步过程。
-3. **本地兜底。** 如果调用失败或超时，客户端自己用一个小型 markdown → HTML 转换器把原文切排。排版正确，用词不加工。
+2. **接管工作过程的渲染位。** 同一个渲染位是按消息种类分键的，插件顺手把思考折叠、注入的上下文、压缩标记、重试和系统提示也认领下来，渲染成空。不能认领的是那些承载交互界面的种类。
+3. **一次改写调用。** 一轮结束后，插件把那段文字交给你的模型，要求严格按固定行协议输出 HTML 片段：一句结论、若干步过程。
+4. **本地兜底。** 如果调用失败或超时，客户端自己用一个小型 markdown → HTML 转换器把原文切排。排版正确，用词不加工。
 
 浏览器半边通过 Connection 的**带鉴权 `/api` 通道**（`ctx.connection.fetch.register`）和宿主半边通信，所以 Host/Origin 信任栅栏和浏览器会话 cookie 由 harness 在处理函数运行前统一校验，插件自己不做任何鉴权。
 
