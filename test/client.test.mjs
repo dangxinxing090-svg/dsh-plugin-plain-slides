@@ -90,7 +90,7 @@ check(
     injectedKeys.includes('shell.overlay'),
   injectedKeys.join(', '),
 )
-check('one injection per registration', injected.length === 11, 'injections=' + injected.length)
+check('one injection per registration', injected.length === 10, 'injections=' + injected.length)
 
 const byKey = (predicate) => registered.find((entry) => predicate(entry.options))
 const nodeEntry = byKey((o) => o.key === 'assistant-step')
@@ -116,7 +116,6 @@ check('all registered entries carry a component', registered.every((entry) => en
 
 const HIDDEN_KINDS = [
   'turn-process',
-  'tool-call',
   'context',
   'compaction',
   'model-retry',
@@ -145,7 +144,12 @@ check(
 )
 check('the turn footer stays visible', !renderedKeys.includes('turn-tail'))
 check('the user keeps their own voice', !renderedKeys.includes('user') && !renderedKeys.includes('steering'))
-check('total registrations matches the declared set', registered.length === 11, 'registered=' + registered.length)
+check(
+  'interactive tool cards keep their own renderer',
+  !renderedKeys.includes('tool-call'),
+  renderedKeys.join(', '),
+)
+check('total registrations matches the declared set', registered.length === 10, 'registered=' + registered.length)
 
 // ---- running and mid-turn assistant steps ----------------------------------
 
