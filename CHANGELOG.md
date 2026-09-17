@@ -3,6 +3,26 @@
 Notable changes to `dsh-plugin-plain-slides`. Versions follow [Semantic
 Versioning](https://semver.org/).
 
+## Unreleased
+
+### Changed
+
+- **Rewriting is opt-in: a reply costs nothing until you ask for it.** The card
+  now opens on `· 原版` — the locally laid out deck — with a `通俗化` button beside
+  the flag, and no model call happens until that button is pressed. Pressing it
+  shows `· 通俗化中…` and then `· 通俗版`; a failure returns the flag to `· 原版`
+  and the button comes back, so a failed ask can be repeated.
+
+  This inverts the default. Until now every closing reply was sent for rewriting
+  the moment it settled, and the reader could only decline afterwards. A deck kept
+  from an earlier session no longer appears on its own either: it is shown when
+  asked for, which is what makes that press instant and free.
+
+  Once a plain deck exists the button moves between the two wordings — `原版`
+  while you are reading the plain version, `通俗化` to return to it — and the
+  opt-in is structural rather than cosmetic: no render path starts a rewrite, so
+  the button's handler is the only way one can begin.
+
 ## 0.4.0
 
 ### Added

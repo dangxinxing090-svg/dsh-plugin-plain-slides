@@ -83,23 +83,30 @@ The row `id` (`plain-slides`) is only a composition key; rename it freely.
 
 ---
 
-## The two states you will see
+## Rewriting is something you ask for
 
-For a second or two after a reply lands, the card header reads `· 通俗化中…` while the rewrite is in flight. Then either:
+**A reply costs nothing by default.** The card opens on `· 原版` — the same slides
+laid out locally from the agent's own words, correct layout and unprocessed
+wording — with a `通俗化` button beside the flag.
 
-- `· 通俗版` appears — the rewrite succeeded, you are reading plain language; or
-- the marker disappears — the rewrite failed, and the card falls back to a locally rendered version. Still correctly formatted, just not simplified.
+Press it, and the header reads `· 通俗化中…` while that turn's rewrite is in
+flight. Then either:
+
+- `· 通俗版` appears — the rewrite succeeded, and you are reading plain language;
+  or
+- the flag goes back to `· 原版` — the rewrite failed, and you keep the locally
+  rendered version. Still correctly formatted, just not simplified.
 
 The fallback never blanks the card and never shows broken markup.
 
-A success is kept. Reopen DSH and that turn shows `· 通俗版` straight away — no
+A success is kept. Come back to that turn — after a reload, or after restarting
+DSH — and pressing `通俗化` shows the plain version straight away: no
 `· 通俗化中…`, and no second call to your model, ever.
 
-Once the rewrite has succeeded the card holds **both wordings**. The header names
-the one you are reading (`· 通俗版`), and the `原版` button beside it switches to
-the same slides laid out from your own text — correct layout, unprocessed wording,
-no model call. The button then reads `通俗版` to come back. That switch is a
-separate control from `完整原文`, which leaves the deck for the full markdown.
+Once a plain deck exists the card holds **both wordings**, and the button beside
+the flag moves between them: `原版` while you are reading the plain version,
+`通俗化` to go back to it. That switch is a separate control from `完整原文`,
+which leaves the deck for the full markdown.
 
 ---
 
@@ -125,16 +132,20 @@ recorded.
 
 ## Cost
 
-Each reply costs **one extra model call** to translate the technical content.
+**Nothing by default.** A reply is laid out locally at no cost, and a model call
+happens only when you press `通俗化` on a turn.
 
 - It uses your currently selected default model.
 - **Only the turn's report is translated.** The working process is never sent.
-- **A success costs exactly one call, and is kept** — reopening DSH shows the
-  plain version again without asking the model a second time, ever.
-- **A failure is retried at most three times**, so one turn costs at most four
-  calls, and each retry gets a wider output budget than the first attempt.
-- Scrolling back does not re-request.
-- To turn the rewrite off and keep only the local version, add `disabled: true` to the plugin row.
+- **A success costs exactly one call, and is kept** — asking again for the same
+  turn, in this session or a later one, shows the plain version without asking
+  the model a second time, ever.
+- **A failure is retried at most three times**, so one ask costs at most four
+  calls, and each retry gets a wider output budget than the first attempt. The
+  button comes back afterwards, so a failed ask can be repeated — that is a new
+  ask, not a silent one.
+- Scrolling back never re-requests.
+- To remove the rewrite entirely — button included — add `disabled: true` to the plugin row.
 
 ---
 
@@ -144,8 +155,8 @@ Four parts:
 
 1. **It takes over the reply renderer.** The plugin registers into the harness's assistant-message seat, so the raw markdown is no longer rendered directly — the slide card is.
 2. **It takes over the working-process renderers.** The same seat is keyed by message kind, so the plugin claims tool rows, reasoning folds, injected context, compaction markers, retries and the system prompt, and renders them as nothing — from the turn's first second, without waiting for the harness's own process fold. That fold only engages for a closed turn that produced a final answer, which is precisely not while a turn runs, nor after one is aborted. The plugin also collapses those rows itself rather than trusting the harness's `:empty` rule: every one of them keeps a child element, so the rule never fires and each row would still take the column's 16px sibling margin — thousands of pixels of blank in a single turn. The working box is not a renderer at all but a composer dock entry, because only the dock draws after the conversation and therefore after the status label. Interactive seats cannot be claimed this way, so the plugin verifies their homes instead: approvals and questions in the composer, deliverables in the turn footer, dynamic-plugin approve/decline in the sidebar panel.
-3. **One rewrite per turn, of the report only.** When a turn settles, the plugin sends the closing step's text — never the process — to your model with a strict instruction: emit HTML fragments in a fixed line protocol, one conclusion and a few steps. One success ends that turn's budget and is kept; a failure is retried at most three times; and the rewrites are serialised, so a reload cannot start a burst of them.
-4. **A local fallback.** If that call fails or times out, the client splits the original text itself with a small markdown → HTML converter. Correct layout, unprocessed wording.
+3. **The rewrite is opt-in, and it is the report only.** A reply is laid out locally first, so a turn costs nothing until you press `通俗化` on it. That press sends the closing step's text — never the process — to your model with a strict instruction: emit HTML fragments in a fixed line protocol, one conclusion and a few steps. One success ends that turn's budget and is kept; a failure is retried at most three times; and the rewrites are serialised, so a burst cannot start.
+4. **The local rendering is the default, not a fallback.** The client splits the original text itself with a small markdown → HTML converter. That is what you read unless you ask for the rewrite, and what you keep reading if the rewrite fails. Correct layout, unprocessed wording.
 
 The client half talks to its host half over Connection's authenticated `/api` fetch channel (`ctx.connection.fetch.register`), so the harness applies its Host/Origin trust fence and browser-session cookie before the handler runs. The plugin implements no authentication of its own.
 
@@ -326,18 +337,20 @@ dsh plugin --profile web remove dsh-plugin-plain-slides
 
 ---
 
-## 你会看到的两种状态
+## 通俗化是要你点才会做的
 
-每轮回答定稿后的最初一两秒，卡头显示 `· 通俗化中…`，这是在等改写调用返回。之后二选一：
+**默认一分钱不花。** 卡片打开时是 `· 原版`——同样的幻灯片，但由 agent 自己的原话在本地排版而成，排版正确、用词不加工——旁边有一个 `通俗化` 按钮。
+
+按下去，卡头变成 `· 通俗化中…`，在等这一轮的改写返回。之后二选一：
 
 - 出现 `· 通俗版` —— 改写成功，你读到的是大白话；或
-- 标记消失 —— 改写失败，卡片退回本地渲染的版本。排版仍然正确，只是用词没加工。
+- 卡头退回 `· 原版` —— 改写失败，你继续看本地渲染的版本。排版仍然正确，只是用词没加工。
 
 兜底版本不会让卡片空白，也不会显示破损的标记。
 
-**成功一次就会存下来。** 下次重开 DSH，那一轮直接显示 `· 通俗版`——不会先出现 `· 通俗化中…`，也不会再问一次模型。
+**成功一次就会存下来。** 以后回到那一轮——刷新页面也好、重开 DSH 也好——再按 `通俗化` 会**直接显示通俗版**：不会先出现 `· 通俗化中…`，也不会再问一次模型。
 
-改写成功之后，卡片同时持有**两种措辞**。卡头写着你正在读的是哪种（`· 通俗版`），旁边的 `原版` 按钮切到同样的幻灯片、但由你自己的原文排版而成——排版正确、用词不加工，**不会再调用模型**；切过去后按钮变成 `通俗版`，点它回来。这个开关和 `完整原文` 是两回事：后者会离开幻灯片、显示完整 markdown。
+一旦通俗版存在，卡片同时持有**两种措辞**，标记旁边的按钮在它们之间切换：正在读通俗版时显示 `原版`，点它回到通俗版时显示 `通俗化`。这个开关和 `完整原文` 是两回事：后者会离开幻灯片、显示完整 markdown。
 
 ---
 
@@ -361,14 +374,14 @@ dsh plugin --profile web remove dsh-plugin-plain-slides
 
 ## 花多少钱
 
-每一轮回答会**多出一次模型调用**，用来把技术内容翻译成大白话。
+**默认不花钱。** 回答先在本地排版，只有你按下某一轮的 `通俗化` 按钮，才会发生模型调用。
 
 - 用的是你当前选中的默认模型
 - **只翻译这一轮的结果**，工作过程从不发给模型
-- **成功只调用一次，并且会存下来**——下次重开 DSH 直接显示通俗版，不会再问模型
-- **失败最多重试三次**，所以一轮最多四次调用；每次重试的输出预算比首次更宽
-- 往回翻不会重复请求
-- 想彻底关掉改写、只留本地版本，在插件行上加 `disabled: true`
+- **成功只调用一次，并且会存下来**——以后对同一轮再按一次，无论在本次会话还是下次打开，都直接显示通俗版，不会再问模型
+- **失败最多重试三次**，所以一次请求最多四次调用；每次重试的输出预算比首次更宽。失败后按钮会回来，可以再按——那是**你主动发起的新一次请求**，不是偷偷重试
+- 往回翻永远不会重新请求
+- 想彻底去掉改写（连按钮一起），在插件行上加 `disabled: true`
 
 ---
 
@@ -378,8 +391,8 @@ dsh plugin --profile web remove dsh-plugin-plain-slides
 
 1. **接管回答的渲染位。** 插件注册进 harness 的"助手消息渲染位"，所以原始 markdown 不再直接渲染——由幻灯片卡取代。
 2. **接管工作过程的渲染位。** 同一个渲染位是按消息种类分键的，插件把工具行、思考折叠、注入的上下文、压缩标记、重试和系统提示全部认领下来，渲染成空——**从一轮的第一秒就生效**，不等 harness 自带的过程折叠（那个折叠只在"轮次已关闭且有最终答复"时才启用，恰好在一轮进行中和任务中止后是关着的，而那两个时刻正是过程最不该刷屏的时候）。**此外插件自己把这些行收起来，不依赖 harness 的 `:empty` 规则**：实测每个被隐藏的节点里都留着一个子元素，那条规则从不生效，于是每一行照样吃掉转录列的 16px 相邻外边距——一轮下来就是几千像素的纯空白。工作框本身不是渲染位，而是一个 composer 停靠项，因为只有停靠层绘制在整段对话之后，也就是绘制在「深度求索中...」之后。承担交互的渲染位不能这样认领，所以插件改为确认它们的落点在别处：授权与提问在 composer，交付物在轮次页脚，动态插件的批准/拒绝在侧栏面板。
-3. **一轮一次改写，且只改写结果。** 一轮结束后，插件把**收尾那一步**的文字交给你的模型（过程永远不发），要求严格按固定行协议输出 HTML 片段：一句结论、若干步过程。**成功一次就结束这一轮预算并永久留用**；失败最多重试三次；改写之间是串行的，所以重新加载不会一次涌出一批调用。
-4. **本地兜底。** 如果调用失败或超时，客户端自己用一个小型 markdown → HTML 转换器把原文切排。排版正确，用词不加工。
+3. **通俗化是 opt-in，而且只改写结果。** 回答先在本地排好版，所以在你按下某一轮的 `通俗化` 之前，这一轮不产生任何调用。按下之后，插件才把**收尾那一步**的文字交给你的模型（过程永远不发），要求严格按固定行协议输出 HTML 片段：一句结论、若干步过程。**成功一次就结束这一轮预算并永久留用**；失败最多重试三次；改写之间是串行的，不会一次涌出一批调用。
+4. **本地渲染是默认路径，不是兜底。** 客户端自己用一个小型 markdown → HTML 转换器把原文切排。**除非你按了通俗化**，你读到的就是它；改写失败时你继续读的也是它。排版正确，用词不加工。
 
 浏览器半边通过 Connection 的**带鉴权 `/api` 通道**（`ctx.connection.fetch.register`）和宿主半边通信，所以 Host/Origin 信任栅栏和浏览器会话 cookie 由 harness 在处理函数运行前统一校验，插件自己不做任何鉴权。
 

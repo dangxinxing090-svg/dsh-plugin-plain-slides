@@ -903,37 +903,47 @@ heldQueue.push((done) => {
 })
 check('a rewrite in flight holds the next one back', held.join(',') === 'first', held.join(','))
 
-// ---- switching between the two wordings ------------------------------------
+// ---- rewriting is opt-in ---------------------------------------------------
 //
-// Once the rewrite has succeeded both decks exist — the plain one and the local
-// one — so the card can move between the two wordings itself. That is a separate
-// control from the raw-text view, which leaves the deck entirely.
+// Nothing is sent until the reader asks. A card nobody has asked opens on the
+// original wording and offers the ask — and a deck kept from an earlier session
+// is no exception: it is shown once asked for, never on its own. That is what
+// keeps a turn from costing a model call by default.
 
 internals.writePlainDeck(undefined, 8, [{ kind: 'conclusion', title: '通俗版标题' }])
-const switchedDeck = resolve(renderStep(closedStep, snapshotWith(['o2'], { o2: closedStep })))
-const switchedButtons = switchedDeck === null ? [] : buttonsIn(switchedDeck, [])
-const wordingButton = switchedButtons.find((button) => textOf(button).trim() === '原版')
+const idleDeck = resolve(renderStep(closedStep, snapshotWith(['o2'], { o2: closedStep })))
+const idleButtons = idleDeck === null ? [] : buttonsIn(idleDeck, [])
+const askButton = idleButtons.find((button) => textOf(button).trim() === '通俗化')
 check(
-  'a rewritten card offers the original wording',
-  wordingButton !== undefined &&
-    String(wordingButton.props.className).indexOf('dshdeck-icontext') !== -1 &&
-    String(wordingButton.props.className).indexOf('dshdeck-outlined') !== -1,
-  switchedButtons.map((button) => textOf(button).trim()).join(' | '),
+  'an unasked card opens on the original wording even with a kept deck waiting',
+  idleDeck !== null && textOf(idleDeck).indexOf('原版') !== -1 && textOf(idleDeck).indexOf('通俗版') === -1,
+  idleDeck === null ? 'no deck' : textOf(idleDeck).slice(0, 60),
 )
 check(
-  'the wording switch carries a rounded frame, unlike the plain text buttons',
+  'an unasked card offers the ask',
+  askButton !== undefined,
+  idleButtons.map((button) => textOf(button).trim()).join(' | '),
+)
+check(
+  'the ask is a labelled, outlined control, not a bare glyph',
+  askButton !== undefined &&
+    String(askButton.props.className).indexOf('dshdeck-icontext') !== -1 &&
+    String(askButton.props.className).indexOf('dshdeck-outlined') !== -1,
+  askButton === undefined ? 'no ask' : String(askButton.props.className),
+)
+check(
+  'the ask carries a rounded frame rule, unlike the plain text buttons',
   source.indexOf('.dshdeck-outlined{border-color:') !== -1 &&
     source.indexOf('.dshdeck-outlined[data-on="true"]') !== -1,
 )
 check(
-  'the switch sits beside the flag naming the current wording',
-  switchedDeck !== null && textOf(switchedDeck).indexOf('通俗版') !== -1,
-  switchedDeck === null ? 'no deck' : textOf(switchedDeck).slice(0, 60),
+  'the ask and the raw-text view are two different controls',
+  askButton !== undefined && idleButtons.some((button) => textOf(button).trim() === '完整原文'),
+  idleButtons.map((button) => textOf(button).trim()).join(' | '),
 )
 check(
-  'the wording switch and the raw-text view are two different controls',
-  wordingButton !== undefined && switchedButtons.some((button) => textOf(button).trim() === '完整原文'),
-  switchedButtons.map((button) => textOf(button).trim()).join(' | '),
+  'the ask is a real handler, wired to the turn it belongs to',
+  askButton !== undefined && typeof askButton.props.onClick === 'function',
 )
 
 const failed = results.filter((r) => !r.ok)
