@@ -106,15 +106,16 @@ moduleExports.apply(fakeClientCtx)
 
 const injectedKeys = [...new Set(injected)]
 check(
-  'injects exactly the four slot keys',
-  injectedKeys.length === 4 &&
+  'injects exactly the five slot keys',
+  injectedKeys.length === 5 &&
     injectedKeys.includes('conversation.chat.node') &&
     injectedKeys.includes('conversation.input.dock') &&
+    injectedKeys.includes('conversation.session.header.utilities') &&
     injectedKeys.includes('conversation.chat.assistant-actions') &&
     injectedKeys.includes('shell.overlay'),
   injectedKeys.join(', '),
 )
-check('one injection per registration', injected.length === 13, 'injections=' + injected.length)
+check('one injection per registration', injected.length === 14, 'injections=' + injected.length)
 
 const byKey = (predicate) => registered.find((entry) => predicate(entry.options))
 const nodeEntry = byKey((o) => o.key === 'assistant-step')
@@ -227,24 +228,26 @@ check('the user keeps their own voice', !renderedKeys.includes('user') && !rende
 // here. The two checks below pin both halves of that bargain.
 check('the process takeover includes tool rows', renderedKeys.includes('tool-call'), renderedKeys.join(', '))
 check(
-  'the plugin reaches no slot outside the four it declares',
+  'the plugin reaches no slot outside the five it declares',
   injectedKeys.every(
     (key) =>
       key === 'conversation.chat.node' ||
       key === 'conversation.input.dock' ||
+      key === 'conversation.session.header.utilities' ||
       key === 'conversation.chat.assistant-actions' ||
       key === 'shell.overlay',
   ),
   injectedKeys.join(', '),
 )
-check('total registrations matches the declared set', registered.length === 13, 'registered=' + registered.length)
+check('total registrations matches the declared set', registered.length === 14, 'registered=' + registered.length)
 
 // ---- running steps, and the working box in the composer dock ----------------
 
-const WORKING_TITLE = '正在工作中'
+const WORKING_TITLE = '正在进行以下专业编程操作，想了解细节，请切到轨迹页'
 const WORKING_KEY = 'dshdeck:working-box-closed'
 const stepEntry = registered.find((entry) => entry.options.key === 'assistant-step')
 const dockEntry = registered.find((entry) => entry.options.id === 'dshdeck-working')
+const toggleEntry = registered.find((entry) => entry.options.id === 'dshdeck-working-toggle')
 
 function snapshotWith(keys, byKey, openTurn) {
   const turns = new Map()
@@ -345,23 +348,22 @@ check(
 )
 const boxColumns = box === null ? [] : box.children || []
 const boxLines = boxColumns.length ? boxColumns[0].children || [] : []
-check('the working box keeps exactly two process lines', boxLines.length === 2, 'lines=' + boxLines.length)
+check('the working box stays exactly two lines', boxLines.length === 2, 'lines=' + boxLines.length)
 check(
-  'the lines run oldest to newest',
-  textOf(boxLines[0]).includes('setup.js') && textOf(boxLines[1]).includes('client.js'),
-  textOf(boxLines[0]).trim() + ' || ' + textOf(boxLines[1]).trim(),
-)
-check(
-  'only the newest line is emphasised',
+  'line one is the title, and it points at the Trajectory',
   boxLines.length === 2 &&
-    boxLines[1].props['data-latest'] === 'true' &&
-    boxLines[0].props['data-latest'] === undefined,
+    boxLines[0].props.className === 'dshdeck-working-title' &&
+    textOf(boxLines[0]).trim() === WORKING_TITLE,
+  textOf(boxLines[0]).trim(),
 )
-check('no title row survives', !textOf(box).includes(WORKING_TITLE), textOf(box).trim())
 check(
-  'the box names no raw tool and no directory',
-  !/\bread\b|\bedit\b/.test(textOf(box)) && textOf(box).indexOf('/a/b') === -1,
-  textOf(box).trim(),
+  'line two is the newest step, with no raw tool or directory',
+  boxLines.length === 2 &&
+    boxLines[1].props.className === 'dshdeck-working-line' &&
+    textOf(boxLines[1]).includes('client.js') &&
+    !/\bread\b|\bedit\b/.test(textOf(boxLines[1])) &&
+    textOf(boxLines[1]).indexOf('/a/b') === -1,
+  textOf(boxLines[1]).trim(),
 )
 
 const closeButton = box === null ? null : findButton(box)
@@ -373,6 +375,10 @@ check(
   'the box does not outlive the turn',
   resolve(renderDock(snapshotWith(['k1', 'k2'], { k1: firstStep, k2: lastStep }))) === null,
 )
+check(
+  'the reopen control stays out of the way while the box is open',
+  resolve(toggleEntry.component({ useChat: (selector) => selector(dockSnapshot) })) === null,
+)
 closeButton.props.onClick()
 check('closing the box removes it from the dock', resolve(renderDock(dockSnapshot)) === null)
 check(
@@ -380,6 +386,27 @@ check(
   globalThis.window.localStorage.getItem(WORKING_KEY) === '1',
   String(globalThis.window.localStorage.getItem(WORKING_KEY)),
 )
+
+// Closing is a persisted preference, so without this control the only way back
+// would be clearing browser storage. It appears exactly when there is something
+// to reopen — a turn running and the box closed.
+const reopenButton = resolve(toggleEntry.component({ useChat: (selector) => selector(dockSnapshot) }))
+check(
+  'a closed box offers a reopen control while a turn runs',
+  reopenButton !== null && reopenButton.type === 'button' && typeof reopenButton.props.onClick === 'function',
+)
+check(
+  'the reopen control stays away once nothing is running',
+  resolve(toggleEntry.component({ useChat: (selector) => selector(snapshotWith(['k1'], { k1: firstStep })) })) === null,
+)
+reopenButton.props.onClick()
+check('the reopen control brings the box back', resolve(renderDock(dockSnapshot)) !== null)
+check(
+  'reopening is remembered too',
+  globalThis.window.localStorage.getItem(WORKING_KEY) === '0',
+  String(globalThis.window.localStorage.getItem(WORKING_KEY)),
+)
+closeButton.props.onClick()
 
 const midStep = {
   key: 'k3',
@@ -498,9 +525,8 @@ check(
   lines({ tools: [{ name: 'read' }] }).join('|'),
 )
 check(
-  'the lines are the last two calls, oldest first',
-  lines({ tools: [{ name: 'glob' }, { name: 'read' }, { name: 'edit' }] }).join('|') ===
-    labels.read + '|' + labels.edit,
+  'the box carries only the newest call, since the title takes the other line',
+  lines({ tools: [{ name: 'glob' }, { name: 'read' }, { name: 'edit' }] }).join('|') === labels.edit,
   lines({ tools: [{ name: 'glob' }, { name: 'read' }, { name: 'edit' }] }).join('|'),
 )
 

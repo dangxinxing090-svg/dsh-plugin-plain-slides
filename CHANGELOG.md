@@ -3,6 +3,23 @@
 Notable changes to `dsh-plugin-plain-slides`. Versions follow [Semantic
 Versioning](https://semver.org/).
 
+## Unreleased
+
+### Added
+
+- **A way back into a closed working box.** Closing it is a persisted
+  preference, so until now the only recovery was clearing browser storage. A
+  small icon button in the session header reopens it, and appears exactly when
+  there is something to reopen — a turn is running and the box is closed — so a
+  closed box still leaves the conversation with nothing but the report.
+
+### Changed
+
+- **The working box leads with a title again.** Line one is now
+  `正在进行以下专业编程操作，想了解细节，请切到轨迹页`, which states what is going on and
+  where the detail lives; line two is the latest step. The box stays exactly two
+  lines, so it still cannot grow or jump while the agent works.
+
 ## 0.2.0
 
 ### Added

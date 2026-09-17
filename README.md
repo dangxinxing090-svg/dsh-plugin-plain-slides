@@ -101,7 +101,7 @@ you are not scrolling past the agent's homework to find the answer:
 
 | In the transcript | What you see |
 | --- | --- |
-| While a turn is running | a two-line box just above the composer, under the `深度求索中...` status — the last two steps in plain language instead of streaming tool rows. Close it and it stays closed |
+| While a turn is running | a two-line box just above the composer, under the `深度求索中...` status — a title naming what is happening and pointing at the Trajectory, then the latest step in plain language. Close it and it stays closed; a small header button brings it back while a turn runs |
 | When the turn settles | your message, then the deck |
 | Tool rows, reasoning, tool folds, injected context, compaction markers, retries, the system prompt | nothing at all |
 | Failures and truncation (`turn-error`, `turn-max-tokens`) | **kept** — you always learn when something went wrong |
@@ -329,7 +329,7 @@ dsh plugin --profile web remove dsh-plugin-plain-slides
 
 | 对话里的位置 | 你会看到 |
 | --- | --- |
-| 一轮正在进行时 | composer 上方一个两行框，位于「深度求索中...」下面 —— 显示最近两步的普通话描述，而不是不断刷新的工具行。关掉它就一直是关的 |
+| 一轮正在进行时 | composer 上方一个两行框，位于「深度求索中...」下面 —— 第一行标题说明正在做什么并指向轨迹页，第二行是最近一步的普通话描述。关掉它就一直是关的；一轮进行中时，会话标题栏会有一个小按钮可以重新打开 |
 | 一轮结束时 | 你的消息，然后是幻灯片 |
 | 工具行、思考过程、工具折叠、注入的上下文、压缩标记、重试、系统提示 | 完全不显示 |
 | 失败与截断（`turn-error`、`turn-max-tokens`） | **保留** —— 出了问题一定会告诉你 |
