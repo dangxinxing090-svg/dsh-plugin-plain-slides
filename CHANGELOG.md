@@ -15,6 +15,20 @@ Versioning](https://semver.org/).
 
 ### Changed
 
+- **The rewrite's call budget is now explicit, finite, and stated in one place.**
+  A success costs exactly one call and ends that turn's budget — no second call
+  ever. A failure is retried at most three times, so one turn costs at most four
+  calls. The second and later attempts request a wider output budget, because an
+  empty answer usually means a reasoning model spent the whole cap on reasoning
+  and still finished cleanly.
+
+  What made the old behaviour unpredictable was that the budget lived in two
+  halves at once: the client cached one call per turn, while the host added a
+  retry of its own whenever the stream came back empty. Nothing in either half
+  knew what the other was doing, so the real number of model calls was not the
+  number either of them thought it was. The host now issues exactly one model
+  call per request and takes the attempt number from the client, which is the
+  only half that can count calls across a whole turn.
 - **The working box leads with a title again.** Line one is now
   `正在进行以下专业编程操作，想了解细节，请切到轨迹页`, which states what is going on and
   where the detail lives; line two is the latest step. The box stays exactly two

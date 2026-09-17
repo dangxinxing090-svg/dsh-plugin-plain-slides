@@ -174,25 +174,53 @@ apply(
         calls += 1
         budgets.push(options.maxTokens)
         return (async function* generate() {
-          if (calls === 1) {
-            yield { type: 'finish', reason: { kind: 'max-tokens' } }
-            return
-          }
-          yield { type: 'text-delta', index: 0, text: 'RESULT: 重试之后有正文了\n' }
+          yield { type: 'text-delta', index: 0, text: 'RESULT: 一次就够\n' }
           yield { type: 'finish', reason: { kind: 'stop' } }
         })()
       },
     },
   }),
 )
-const retried = await routes[0].fetch(post(JSON.stringify({ text: '一段较长的输入' })))
-const retriedBody = await retried.json()
-check('an empty first answer is retried', calls === 2, 'calls=' + calls)
-check('the retry doubles the budget', budgets[1] === budgets[0] * 2, budgets.join(' -> '))
+const first = await routes[0].fetch(post(JSON.stringify({ text: '一段较长的输入' })))
+const firstBody = await first.json()
+check('one request costs exactly one model call', calls === 1, 'calls=' + calls)
+check('the first attempt uses the base budget', budgets[0] === 8000, budgets.join(' -> '))
 check(
-  'the retry result is the one returned',
-  retriedBody.ok === true && /重试之后有正文了/.test(retriedBody.text),
-  JSON.stringify(retriedBody).slice(0, 120),
+  'the answer is the one returned',
+  firstBody.ok === true && /一次就够/.test(firstBody.text),
+  JSON.stringify(firstBody).slice(0, 120),
+)
+
+// The host used to add a retry of its own, which silently doubled whatever cap
+// the caller believed it had. The budget belongs to the client, which is the
+// only half that can count calls across a whole turn, so a repeat request is a
+// separate request — and it is the one that earns the wider cap, because an
+// empty answer usually means a reasoning model spent the whole budget thinking.
+routes.length = 0
+calls = 0
+budgets.length = 0
+apply(
+  makeCtx({
+    llm: {
+      stream(options) {
+        calls += 1
+        budgets.push(options.maxTokens)
+        return (async function* generate() {
+          yield { type: 'text-delta', index: 0, text: 'RESULT: 宽预算重试\n' }
+          yield { type: 'finish', reason: { kind: 'stop' } }
+        })()
+      },
+    },
+  }),
+)
+const repeated = await routes[0].fetch(post(JSON.stringify({ text: 'x', attempt: 1 })))
+const repeatedBody = await repeated.json()
+check('a repeat request is still one model call', calls === 1, 'calls=' + calls)
+check('a repeat request gets the wider budget', budgets[0] === 16000, budgets.join(' -> '))
+check(
+  'the repeat answer is returned',
+  repeatedBody.ok === true && /宽预算重试/.test(repeatedBody.text),
+  JSON.stringify(repeatedBody).slice(0, 120),
 )
 
 routes.length = 0
@@ -209,13 +237,13 @@ apply(
     },
   }),
 )
-const twiceEmpty = await routes[0].fetch(post(JSON.stringify({ text: 'x' })))
-const twiceEmptyBody = await twiceEmpty.json()
-check('it retries only once', calls === 2, 'calls=' + calls)
+const empty = await routes[0].fetch(post(JSON.stringify({ text: 'x' })))
+const emptyBody = await empty.json()
+check('an empty answer is not retried by this half', calls === 1, 'calls=' + calls)
 check(
-  'a still-empty answer names the finish reason',
-  twiceEmptyBody.ok === false && /max-tokens/.test(String(twiceEmptyBody.message)),
-  JSON.stringify(twiceEmptyBody),
+  'an empty answer names the finish reason',
+  emptyBody.ok === false && /max-tokens/.test(String(emptyBody.message)),
+  JSON.stringify(emptyBody),
 )
 
 // Without the connection service the plugin must stay inert, not throw.

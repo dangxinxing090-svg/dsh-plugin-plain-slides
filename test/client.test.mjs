@@ -662,6 +662,70 @@ try {
 }
 check('a bare { prompt } still fails loudly instead of degrading silently', narrowShapeThrows)
 
+// ---- the rewrite call budget ----------------------------------------------
+//
+// The host half used to keep a retry of its own on top of whatever the client
+// did, so the real number of model calls was not the number either half thought
+// it was. The budget now lives in exactly one place: one attempt plus at most
+// REWRITE_MAX_RETRIES more, and not one call further once a deck comes back.
+
+const REWRITE_DECK = [{ kind: 'conclusion', title: 'ok' }]
+
+function driveRewrite(outcomes) {
+  const calls = []
+  let settled = null
+  return new Promise((resolve) => {
+    internals.runRewrite(
+      (attempt) => {
+        calls.push(attempt)
+        const outcome = outcomes[Math.min(attempt, outcomes.length - 1)]
+        return outcome === 'throw' ? Promise.reject(new Error('boom')) : Promise.resolve(outcome)
+      },
+      (state, slides) => {
+        settled = { state, slides }
+        resolve()
+      },
+    )
+  }).then(() => ({ calls, settled }))
+}
+
+const okFirst = await driveRewrite([REWRITE_DECK])
+check('a successful rewrite costs exactly one call', okFirst.calls.join(',') === '0', okFirst.calls.join(','))
+check(
+  'a successful rewrite settles as plain with the deck',
+  okFirst.settled.state === 'plain' && okFirst.settled.slides === REWRITE_DECK,
+)
+
+const alwaysFails = await driveRewrite([null])
+check(
+  'a failing rewrite stops at the first attempt plus the retry cap',
+  alwaysFails.calls.length === internals.REWRITE_MAX_RETRIES + 1,
+  alwaysFails.calls.join(','),
+)
+check(
+  'every retry is a distinct, consecutive attempt number',
+  alwaysFails.calls.join(',') === '0,1,2,3',
+  alwaysFails.calls.join(','),
+)
+check(
+  'a failing rewrite settles as error with no deck',
+  alwaysFails.settled.state === 'error' && alwaysFails.settled.slides === null,
+)
+
+const healsLate = await driveRewrite([null, null, REWRITE_DECK])
+check(
+  'a rewrite that heals mid-budget stops calling there',
+  healsLate.calls.length === 3 && healsLate.settled.state === 'plain',
+  healsLate.calls.join(','),
+)
+
+const rejectsAlways = await driveRewrite(['throw'])
+check(
+  'a rejected call spends the same budget rather than getting a fresh one',
+  rejectsAlways.calls.length === internals.REWRITE_MAX_RETRIES + 1 && rejectsAlways.settled.state === 'error',
+  rejectsAlways.calls.join(','),
+)
+
 const failed = results.filter((r) => !r.ok)
 console.log('\n' + (results.length - failed.length) + '/' + results.length + ' checks passed')
 process.exit(failed.length === 0 ? 0 : 1)
