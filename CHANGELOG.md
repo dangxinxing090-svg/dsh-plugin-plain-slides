@@ -7,14 +7,32 @@ Versioning](https://semver.org/).
 
 ### Added
 
-- **A way back into a closed working box.** Closing it is a persisted
-  preference, so until now the only recovery was clearing browser storage. A
-  small icon button in the session header reopens it, and appears exactly when
-  there is something to reopen — a turn is running and the box is closed — so a
-  closed box still leaves the conversation with nothing but the report.
+- **A successful rewrite is kept, so reopening DSH shows the plain version
+  without asking the model again.** A rewrite is a pure function of the closing
+  step's text and that text cannot change once the turn has closed, so one
+  success is enough forever. Decks are kept in `localStorage` under a
+  version-prefixed key (`dshdeck:plain-decks`, `v1:<session>:<turn>`) and capped
+  at 120 entries, evicting the least recently written. Until now every reload
+  re-rendered every turn and re-asked the model for each one — the exact
+  repetition this removes. The store is an optimisation throughout: a blocked,
+  full or corrupt store falls back to asking, never to a broken card.
+- **A switch for the working box in the session header.** Closing it is a
+  persisted preference, so without this the only recovery was clearing browser
+  storage. It is on screen in both states, with `data-on` showing which.
 
 ### Changed
 
+- **Only the turn's report is ever rewritten, and that is now explicit.** A
+  running step and a mid-turn step are the process: this plugin never renders
+  them and must never pay a model call for them. `rewriteTarget` returns the
+  closing step's text and `null` for everything else, so the rule is asserted
+  rather than inferred from a boolean expression at the call site.
+- **The header switch no longer hides itself.** It used to appear only while a
+  turn was running *and* the box was closed, which made it invisible to exactly
+  the person looking for it — a hover-less header icon that is missing most of
+  the time reads as a control that does not exist. It lives in the header rather
+  than beside the box, which keeps the promise that a closed box leaves the
+  conversation with nothing but the report.
 - **The rewrite's call budget is now explicit, finite, and stated in one place.**
   A success costs exactly one call and ends that turn's budget — no second call
   ever. A failure is retried at most three times, so one turn costs at most four

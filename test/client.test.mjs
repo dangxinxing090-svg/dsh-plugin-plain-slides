@@ -376,8 +376,12 @@ check(
   resolve(renderDock(snapshotWith(['k1', 'k2'], { k1: firstStep, k2: lastStep }))) === null,
 )
 check(
-  'the reopen control stays out of the way while the box is open',
-  resolve(toggleEntry.component({ useChat: (selector) => selector(dockSnapshot) })) === null,
+  'the header switch is on screen while the box is open, and reads as on',
+  (() => {
+    const open = resolve(toggleEntry.component({}))
+    return open !== null && open.type === 'button' && open.props['data-on'] === 'true'
+  })(),
+  JSON.stringify(resolve(toggleEntry.component({})) && resolve(toggleEntry.component({})).props),
 )
 closeButton.props.onClick()
 check('closing the box removes it from the dock', resolve(renderDock(dockSnapshot)) === null)
@@ -388,16 +392,18 @@ check(
 )
 
 // Closing is a persisted preference, so without this control the only way back
-// would be clearing browser storage. It appears exactly when there is something
-// to reopen — a turn running and the box closed.
-const reopenButton = resolve(toggleEntry.component({ useChat: (selector) => selector(dockSnapshot) }))
+// would be clearing browser storage. It is always on screen, in both states:
+// an earlier version appeared only while a turn was running and the box was
+// closed, which hid it from exactly the person looking for it.
+const reopenButton = resolve(toggleEntry.component({}))
 check(
-  'a closed box offers a reopen control while a turn runs',
-  reopenButton !== null && reopenButton.type === 'button' && typeof reopenButton.props.onClick === 'function',
+  'the header switch is still there once the box is closed, and reads as off',
+  reopenButton !== null && reopenButton.type === 'button' && reopenButton.props['data-on'] === 'false',
+  reopenButton === null ? 'no control' : String(reopenButton.props['data-on']),
 )
 check(
-  'the reopen control stays away once nothing is running',
-  resolve(toggleEntry.component({ useChat: (selector) => selector(snapshotWith(['k1'], { k1: firstStep })) })) === null,
+  'the header switch does not depend on a turn running',
+  resolve(toggleEntry.component({})) !== null,
 )
 reopenButton.props.onClick()
 check('the reopen control brings the box back', resolve(renderDock(dockSnapshot)) !== null)
@@ -724,6 +730,63 @@ check(
   'a rejected call spends the same budget rather than getting a fresh one',
   rejectsAlways.calls.length === internals.REWRITE_MAX_RETRIES + 1 && rejectsAlways.settled.state === 'error',
   rejectsAlways.calls.join(','),
+)
+
+// ---- only the report is rewritten, and only ever once ---------------------
+//
+// The process is never rendered and must never be paid for. Only the closing
+// step of a settled turn is a rewrite target; a running step and a mid-turn step
+// are not.
+
+check('a running step is never sent for rewriting', internals.rewriteTarget(false, true, '一些过程文字') === null)
+check('a mid-turn step is never sent for rewriting', internals.rewriteTarget(true, false, '一些过程文字') === null)
+check('a step with no text is never sent', internals.rewriteTarget(true, true, '') === null)
+check(
+  'the closing step of a settled turn is the one rewrite target',
+  internals.rewriteTarget(true, true, '结论在这里') === '结论在这里',
+)
+
+// The rewrite is a pure function of that closing text, and the text cannot
+// change once the turn has closed. One success must therefore be enough
+// forever, including across a restart — otherwise every reload re-asks the model
+// for turns whose plain version is already known.
+const KEPT_DECK = [{ kind: 'conclusion', title: '通俗版' }]
+check('a turn with nothing kept asks for a rewrite', internals.rewritePlan('session-a', 7).state === 'call')
+
+internals.writePlainDeck('session-a', 7, KEPT_DECK)
+const keptPlan = internals.rewritePlan('session-a', 7)
+check(
+  'a kept deck is reused instead of asking again',
+  keptPlan.state === 'reuse' && JSON.stringify(keptPlan.slides) === JSON.stringify(KEPT_DECK),
+  keptPlan.state + ' ' + JSON.stringify(keptPlan.slides),
+)
+check(
+  'a kept deck belongs to its own session and turn',
+  internals.rewritePlan('session-a', 8).state === 'call' && internals.rewritePlan('session-b', 7).state === 'call',
+)
+check(
+  'the kept decks are namespaced under a protocol version',
+  internals.plainStoreKey('s', 1).indexOf(':s:1') !== -1 && /^v\d+:/.test(internals.plainStoreKey('s', 1)),
+  internals.plainStoreKey('s', 1),
+)
+
+// A store that cannot be read must degrade to "ask", never to a broken card.
+globalThis.window.localStorage.setItem(internals.PLAIN_STORE_KEY, '{not json')
+check('a corrupt store reads as empty rather than throwing', internals.rewritePlan('session-a', 7).state === 'call')
+globalThis.window.localStorage.setItem(internals.PLAIN_STORE_KEY, '["not","a","map"]')
+check('a store that is not a map reads as empty', internals.rewritePlan('session-a', 7).state === 'call')
+
+for (let i = 0; i < internals.PLAIN_STORE_MAX + 5; i++) internals.writePlainDeck('evict', i, KEPT_DECK)
+const storedDecks = JSON.parse(globalThis.window.localStorage.getItem(internals.PLAIN_STORE_KEY))
+check(
+  'the store is capped so it cannot grow without bound',
+  Object.keys(storedDecks).length === internals.PLAIN_STORE_MAX,
+  'entries=' + Object.keys(storedDecks).length,
+)
+check(
+  'the oldest entries are the ones dropped',
+  internals.rewritePlan('evict', 0).state === 'call' &&
+    internals.rewritePlan('evict', internals.PLAIN_STORE_MAX + 4).state === 'reuse',
 )
 
 const failed = results.filter((r) => !r.ok)

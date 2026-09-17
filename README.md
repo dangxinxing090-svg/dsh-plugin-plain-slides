@@ -119,8 +119,9 @@ recorded.
 Each reply costs **one extra model call** to translate the technical content.
 
 - It uses your currently selected default model.
-- **A success costs exactly one call, and never a second one for that turn** —
-  the turn's budget ends the moment a usable deck comes back.
+- **Only the turn's report is translated.** The working process is never sent.
+- **A success costs exactly one call, and is kept** — reopening DSH shows the
+  plain version again without asking the model a second time, ever.
 - **A failure is retried at most three times**, so one turn costs at most four
   calls, and each retry gets a wider output budget than the first attempt.
 - Scrolling back does not re-request.
@@ -350,7 +351,8 @@ dsh plugin --profile web remove dsh-plugin-plain-slides
 每一轮回答会**多出一次模型调用**，用来把技术内容翻译成大白话。
 
 - 用的是你当前选中的默认模型
-- **成功就只调用一次，那一轮不会再调第二次**——只要拿到可用的幻灯片，这一轮的预算立刻结束
+- **只翻译这一轮的结果**，工作过程从不发给模型
+- **成功只调用一次，并且会存下来**——下次重开 DSH 直接显示通俗版，不会再问模型
 - **失败最多重试三次**，所以一轮最多四次调用；每次重试的输出预算比首次更宽
 - 往回翻不会重复请求
 - 想彻底关掉改写、只留本地版本，在插件行上加 `disabled: true`
