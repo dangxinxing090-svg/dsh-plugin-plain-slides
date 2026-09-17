@@ -26,6 +26,13 @@ Versioning](https://semver.org/).
 
 ### Changed
 
+- **The stretch-to-full-height control is gone, and the way to the full original
+  text is now labelled.** The card header grew a second icon button that toggled
+  the card between its clamped height and the whole conversation height; it is
+  removed, along with the state and the icon that served it, and the card simply
+  keeps its clamped height. The remaining control shows `完整原文` beside its icon
+  (`回到幻灯片` once you are reading the original), so the way out of the deck is
+  readable rather than a bare glyph.
 - **Only the turn's report is ever rewritten, and that is now explicit.** A
   running step and a mid-turn step are the process: this plugin never renders
   them and must never pay a model call for them. `rewriteTarget` returns the

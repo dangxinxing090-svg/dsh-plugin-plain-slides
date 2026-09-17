@@ -480,6 +480,39 @@ check(
   renderStep(closedStep, snapshotWith(['o2'], { o2: closedStep })) !== null,
 )
 
+// The card header offers one labelled control: the way to the full original
+// text. The stretch-to-full-height control that used to sit beside it is gone,
+// along with the state and the icon that served it.
+function buttonsIn(element, found) {
+  if (element === null || element === undefined || typeof element !== 'object') return found
+  if (element.type === 'button') found.push(element)
+  const children = element.children || []
+  for (const child of children) buttonsIn(child, found)
+  return found
+}
+
+const reportDeck = resolve(renderStep(closedStep, snapshotWith(['o2'], { o2: closedStep })))
+const headerButtons = reportDeck === null ? [] : buttonsIn(reportDeck, [])
+const textButton = headerButtons.find((button) => button.props.className === 'dshdeck-icontext')
+check(
+  'the full-text control carries its label, not only an icon',
+  textButton !== undefined && textOf(textButton).indexOf('完整原文') !== -1,
+  textButton === undefined ? 'no labelled control' : textOf(textButton).trim(),
+)
+check(
+  'the stretch-to-full-height control and its wording are gone',
+  reportDeck !== null &&
+    headerButtons.every((button) => {
+      const words = String(button.props.title) + String(button.props['aria-label'])
+      return words.indexOf('展开') === -1 && words.indexOf('收起') === -1
+    }),
+  headerButtons.map((button) => button.props.title).join(' | '),
+)
+check(
+  'no expand state or icon is left in the bundle',
+  source.indexOf('stretchIcon') === -1 && source.indexOf('setExpand') === -1,
+)
+
 // ---- tool-name glossary ----------------------------------------------------
 
 const internals = moduleExports.__internals
