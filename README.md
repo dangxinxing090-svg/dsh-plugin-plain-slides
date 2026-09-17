@@ -2,7 +2,7 @@
 
 > A DeepSeek Harness plugin that turns each agent reply into a short slide deck in plain language — for people who use the harness but do not read code.
 
-The agent still writes whatever it writes. This plugin gives you **a second way to read it**: every reply is re-shown as a few slides — conclusion first, then a few steps, then any question the agent is waiting on you to answer. The original text is always one click away.
+The agent still writes whatever it writes. This plugin gives you **a second way to read it**: every reply is re-shown as a few slides — conclusion first, then a few steps, then any question the agent is waiting on you to answer. The original text is always one click away, and the plainly-worded version is one press away, on the turns you want it.
 
 ---
 
@@ -97,7 +97,7 @@ flight. Then either:
 - the flag goes back to `· 原版` — the rewrite failed, and you keep the locally
   rendered version. Still correctly formatted, just not simplified.
 
-The fallback never blanks the card and never shows broken markup.
+The local deck never blanks the card and never shows broken markup.
 
 A success is kept. Come back to that turn — after a reload, or after restarting
 DSH — and pressing `通俗化` shows the plain version straight away: no
@@ -200,9 +200,11 @@ cell. On v0.1.0, upgrade.
 with a `演示` button on it. If replies are plain markdown, it is not loaded — and
 the harness itself is fine; the failure is confined to this plugin's own row.
 
-**The card renders but the wording is still technical.** The rewrite call failed
-and the local fallback drew the card instead: the `· 通俗版` marker is absent.
-Still correctly laid out, just not simplified.
+**The card renders but the wording is still technical.** That is the default: a
+reply is laid out locally and nothing is rewritten until you press `通俗化` on it.
+If you pressed it and the flag went back to `· 原版`, the rewrite failed — open
+the browser console and look for `plain-slides:`, which reports how many attempts
+it made and why the last one produced nothing.
 
 ---
 
@@ -211,8 +213,8 @@ Still correctly laid out, just not simplified.
 No build step — the files in `lib/` are the source.
 
 ```
-lib/index.js       host half: the rewrite call and the /api route
-lib/client.js      browser half: reply renderer, slide deck, markdown fallback
+lib/index.js       host half: one rewrite call per request, and the /api route
+lib/client.js      browser half: reply renderer, slide deck, local deck builder
 cordis.patch.yml   the self-mounting bundle patch
 test/              runnable verification for both halves
 ```
@@ -256,7 +258,7 @@ MIT licensed.
 
 > 一个 DeepSeek Harness 插件。把每一轮 AI 的回答重新排成几页大白话幻灯片——给用这个 harness、但不读代码的人。
 
-AI 该怎么写还是怎么写。这个插件只是给你**第二种读法**：每轮回答都被重新呈现成几页幻灯片——先给结论，再列几步过程，最后是 AI 在等你拍板的问题。原文永远只差一次点击。
+AI 该怎么写还是怎么写。这个插件只是给你**第二种读法**：每轮回答都被重新呈现成几页幻灯片——先给结论，再列几步过程，最后是 AI 在等你拍板的问题。原文永远只差一次点击，**大白话版本则在你想要的那几轮上差一次按下**。
 
 ---
 
@@ -346,7 +348,7 @@ dsh plugin --profile web remove dsh-plugin-plain-slides
 - 出现 `· 通俗版` —— 改写成功，你读到的是大白话；或
 - 卡头退回 `· 原版` —— 改写失败，你继续看本地渲染的版本。排版仍然正确，只是用词没加工。
 
-兜底版本不会让卡片空白，也不会显示破损的标记。
+本地排版不会让卡片空白，也不会显示破损的标记。
 
 **成功一次就会存下来。** 以后回到那一轮——刷新页面也好、重开 DSH 也好——再按 `通俗化` 会**直接显示通俗版**：不会先出现 `· 通俗化中…`，也不会再问一次模型。
 
@@ -429,7 +431,7 @@ v0.1.1 已修复：每个注册都带 `priority: -10`，数字更低，赢得格
 
 **怎么判断插件到底有没有加载？** 加载成功时，每条回复都是一张卡片，右上角还有一个"演示"按钮。如果回复是普通 markdown，就是没加载 —— 但 harness 本身没事，失败只局限在这个插件自己那条 row 里。
 
-**卡片出来了，但用词还是很专业。** 说明改写调用失败、退回了本地渲染 —— 右上角不会出现 `· 通俗版` 标记。排版仍然正确，只是用词没加工。
+**卡片出来了，但用词还是很专业。** 这是**默认状态**：回答先在本地排版，你没按 `通俗化` 就不会改写。如果你按了、卡头又退回 `· 原版`，说明改写失败——打开浏览器控制台找 `plain-slides:`，它会报告尝试了几次、以及最后一次为什么没产出内容。
 
 ---
 
@@ -438,8 +440,8 @@ v0.1.1 已修复：每个注册都带 `priority: -10`，数字更低，赢得格
 没有构建步骤——`lib/` 里的文件就是源码。
 
 ```
-lib/index.js      宿主半边：发起改写调用、提供 /api 路由
-lib/client.js     浏览器半边：接管回答显示、渲染幻灯片、markdown 兜底
+lib/index.js      宿主半边：每次请求恰好一次改写调用，以及 /api 路由
+lib/client.js     浏览器半边：接管回答显示、渲染幻灯片、本地排版
 cordis.patch.yml  自挂载补丁
 test/             两个半边各自的可运行验证
 ```
