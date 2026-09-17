@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-plain-slides",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Turn each agent reply into a plain-language slide deck instead of a wall of technical markdown. A DeepSeek Harness plugin for people who do not read code.",
   "license": "MIT",
   "author": "dangxinxing090-svg",

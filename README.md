@@ -18,7 +18,7 @@ This plugin puts a slide deck **where that reply would have been** — a few pag
 | 2–6 | **Process** | What actually happened, one line per step |
 | last | **Questions** | If the agent needs a decision, click an option or type a reply |
 
-Nothing is deleted. The button in the card header switches to the full original text, with a technical summary line (elapsed time, operation count, token usage) above it.
+Nothing is deleted. The `完整原文` button in the card header switches to the full original text, with a technical summary line (elapsed time, operation count, token usage) above it, and switches back with `回到幻灯片`.
 
 ---
 
@@ -92,6 +92,9 @@ For a second or two after a reply lands, the card header reads `· 通俗化中�
 
 The fallback never blanks the card and never shows broken markup.
 
+A success is kept. Reopen DSH and that turn shows `· 通俗版` straight away — no
+`· 通俗化中…`, and no second call to your model, ever.
+
 ---
 
 ## What the conversation itself shows
@@ -101,7 +104,7 @@ you are not scrolling past the agent's homework to find the answer:
 
 | In the transcript | What you see |
 | --- | --- |
-| While a turn is running | a two-line box just above the composer, under the `深度求索中...` status — a title naming what is happening and pointing at the Trajectory, then the latest step in plain language. Close it and it stays closed; a small header button brings it back while a turn runs |
+| While a turn is running | a two-line box just above the composer, under the `深度求索中...` status — a title naming what is happening and pointing at the Trajectory, then the latest step in plain language. Close it and it stays closed; a switch in the session header brings it back, in any state |
 | When the turn settles | your message, then the deck |
 | Tool rows, reasoning, tool folds, injected context, compaction markers, retries, the system prompt | nothing at all |
 | Failures and truncation (`turn-error`, `turn-max-tokens`) | **kept** — you always learn when something went wrong |
@@ -134,8 +137,8 @@ Each reply costs **one extra model call** to translate the technical content.
 Four parts:
 
 1. **It takes over the reply renderer.** The plugin registers into the harness's assistant-message seat, so the raw markdown is no longer rendered directly — the slide card is.
-2. **It takes over the working-process renderers.** The same seat is keyed by message kind, so the plugin also claims reasoning folds, injected context, compaction markers, retries and the system prompt, and renders them as nothing. The kinds it must not claim are the ones carrying interactive UI.
-3. **One rewrite call.** When a turn settles, the plugin sends that text to your model with a strict instruction: emit HTML fragments in a fixed line protocol — one conclusion, a few process steps.
+2. **It takes over the working-process renderers.** The same seat is keyed by message kind, so the plugin claims tool rows, reasoning folds, injected context, compaction markers, retries and the system prompt, and renders them as nothing — from the turn's first second, without waiting for the harness's own process fold. That fold only engages for a closed turn that produced a final answer, which is precisely not while a turn runs, nor after one is aborted. The plugin also collapses those rows itself rather than trusting the harness's `:empty` rule: every one of them keeps a child element, so the rule never fires and each row would still take the column's 16px sibling margin — thousands of pixels of blank in a single turn. The working box is not a renderer at all but a composer dock entry, because only the dock draws after the conversation and therefore after the status label. Interactive seats cannot be claimed this way, so the plugin verifies their homes instead: approvals and questions in the composer, deliverables in the turn footer, dynamic-plugin approve/decline in the sidebar panel.
+3. **One rewrite per turn, of the report only.** When a turn settles, the plugin sends the closing step's text — never the process — to your model with a strict instruction: emit HTML fragments in a fixed line protocol, one conclusion and a few steps. One success ends that turn's budget and is kept; a failure is retried at most three times; and the rewrites are serialised, so a reload cannot start a burst of them.
 4. **A local fallback.** If that call fails or times out, the client splits the original text itself with a small markdown → HTML converter. Correct layout, unprocessed wording.
 
 The client half talks to its host half over Connection's authenticated `/api` fetch channel (`ctx.connection.fetch.register`), so the harness applies its Host/Origin trust fence and browser-session cookie before the handler runs. The plugin implements no authentication of its own.
@@ -201,7 +204,7 @@ test/              runnable verification for both halves
 npm test
 ```
 
-`test/host.test.mjs` mounts the host half against a fake context and drives the real route with `Request`/`Response` objects. `test/client.test.mjs` drives the actual browser-bundle contract: it captures the `window.__ModuleLoader__` registration, calls the factory with a stub `require`, and asserts the plugin registers the same three contribution points.
+`test/host.test.mjs` mounts the host half against a fake context and drives the real route with `Request`/`Response` objects. `test/client.test.mjs` drives the actual browser-bundle contract: it captures the `window.__ModuleLoader__` registration, calls the factory with a stub `require`, and asserts every contribution the client half makes — the five seats it registers into, the kinds it takes over, the rewrite's call budget and kept decks, and the working box.
 
 To try a local checkout without publishing:
 
@@ -252,7 +255,7 @@ AI 干完活，吐出一大段文字：文件名、代码、术语、括号、�
 | 第 2–6 页 | **过程** | 每一步实际做了一件什么事 |
 | 最后几页 | **问题** | 如果 AI 在等你决定，点选项或直接输入回复 |
 
-什么都没删。卡片右上角的按钮随时切回完整原文，原文上方还有一行技术统计（耗时、操作次数、token 用量）。
+什么都没删。卡片右上角的 `完整原文` 按钮随时切回完整原文，原文上方还有一行技术统计（耗时、操作次数、token 用量）；进入原文后按钮变成 `回到幻灯片`。
 
 ---
 
@@ -326,6 +329,8 @@ dsh plugin --profile web remove dsh-plugin-plain-slides
 
 兜底版本不会让卡片空白，也不会显示破损的标记。
 
+**成功一次就会存下来。** 下次重开 DSH，那一轮直接显示 `· 通俗版`——不会先出现 `· 通俗化中…`，也不会再问一次模型。
+
 ---
 
 ## 对话里还剩什么
@@ -334,7 +339,7 @@ dsh plugin --profile web remove dsh-plugin-plain-slides
 
 | 对话里的位置 | 你会看到 |
 | --- | --- |
-| 一轮正在进行时 | composer 上方一个两行框，位于「深度求索中...」下面 —— 第一行标题说明正在做什么并指向轨迹页，第二行是最近一步的普通话描述。关掉它就一直是关的；一轮进行中时，会话标题栏会有一个小按钮可以重新打开 |
+| 一轮正在进行时 | composer 上方一个两行框，位于「深度求索中...」下面 —— 第一行标题说明正在做什么并指向轨迹页，第二行是最近一步的普通话描述。关掉它就一直是关的；会话标题栏有一个开关，任何状态都能把它打开或关掉 |
 | 一轮结束时 | 你的消息，然后是幻灯片 |
 | 工具行、思考过程、工具折叠、注入的上下文、压缩标记、重试、系统提示 | 完全不显示 |
 | 失败与截断（`turn-error`、`turn-max-tokens`） | **保留** —— 出了问题一定会告诉你 |
@@ -364,8 +369,8 @@ dsh plugin --profile web remove dsh-plugin-plain-slides
 四个部件：
 
 1. **接管回答的渲染位。** 插件注册进 harness 的"助手消息渲染位"，所以原始 markdown 不再直接渲染——由幻灯片卡取代。
-2. **接管工作过程的渲染位。** 同一个渲染位是按消息种类分键的，插件把工具行、思考折叠、注入的上下文、压缩标记、重试和系统提示全部认领下来，渲染成空——**从一轮的第一秒就生效**，不等 harness 自带的过程折叠（那个折叠只在"轮次已关闭且有最终答复"时才启用，恰好在一轮进行中和任务中止后是关着的，而那两个时刻正是过程最不该刷屏的时候）。工作框本身不是渲染位，而是一个 composer 停靠项，因为只有停靠层绘制在整段对话之后，也就是绘制在「深度求索中...」之后。承担交互的渲染位不能这样认领，所以插件改为确认它们的落点在别处：授权与提问在 composer，交付物在轮次页脚，动态插件的批准/拒绝在侧栏面板。
-3. **一次改写调用。** 一轮结束后，插件把那段文字交给你的模型，要求严格按固定行协议输出 HTML 片段：一句结论、若干步过程。
+2. **接管工作过程的渲染位。** 同一个渲染位是按消息种类分键的，插件把工具行、思考折叠、注入的上下文、压缩标记、重试和系统提示全部认领下来，渲染成空——**从一轮的第一秒就生效**，不等 harness 自带的过程折叠（那个折叠只在"轮次已关闭且有最终答复"时才启用，恰好在一轮进行中和任务中止后是关着的，而那两个时刻正是过程最不该刷屏的时候）。**此外插件自己把这些行收起来，不依赖 harness 的 `:empty` 规则**：实测每个被隐藏的节点里都留着一个子元素，那条规则从不生效，于是每一行照样吃掉转录列的 16px 相邻外边距——一轮下来就是几千像素的纯空白。工作框本身不是渲染位，而是一个 composer 停靠项，因为只有停靠层绘制在整段对话之后，也就是绘制在「深度求索中...」之后。承担交互的渲染位不能这样认领，所以插件改为确认它们的落点在别处：授权与提问在 composer，交付物在轮次页脚，动态插件的批准/拒绝在侧栏面板。
+3. **一轮一次改写，且只改写结果。** 一轮结束后，插件把**收尾那一步**的文字交给你的模型（过程永远不发），要求严格按固定行协议输出 HTML 片段：一句结论、若干步过程。**成功一次就结束这一轮预算并永久留用**；失败最多重试三次；改写之间是串行的，所以重新加载不会一次涌出一批调用。
 4. **本地兜底。** 如果调用失败或超时，客户端自己用一个小型 markdown → HTML 转换器把原文切排。排版正确，用词不加工。
 
 浏览器半边通过 Connection 的**带鉴权 `/api` 通道**（`ctx.connection.fetch.register`）和宿主半边通信，所以 Host/Origin 信任栅栏和浏览器会话 cookie 由 harness 在处理函数运行前统一校验，插件自己不做任何鉴权。
@@ -422,7 +427,7 @@ test/             两个半边各自的可运行验证
 npm test
 ```
 
-`test/host.test.mjs` 把假上下文挂上宿主半边，用真正的 `Request`/`Response` 打通整条路由；`test/client.test.mjs` 验证真实的浏览器包契约——捕获 `window.__ModuleLoader__` 注册、用桩 `require` 调用工厂函数，并断言它注册了同样的三个贡献点。
+`test/host.test.mjs` 把假上下文挂上宿主半边，用真正的 `Request`/`Response` 打通整条路由；`test/client.test.mjs` 验证真实的浏览器包契约——捕获 `window.__ModuleLoader__` 注册、用桩 `require` 调用工厂函数，并断言客户端半边的每一项贡献：它注册的五个槽位、接管的节点种类、改写的调用预算与留存的通俗版、以及工作框。
 
 想试本地 checkout 而不发布：
 
