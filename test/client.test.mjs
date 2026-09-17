@@ -243,7 +243,7 @@ check('total registrations matches the declared set', registered.length === 14, 
 
 // ---- running steps, and the working box in the composer dock ----------------
 
-const WORKING_TITLE = '正在进行以下专业编程操作，想了解细节，请切到轨迹页'
+const WORKING_TITLE = '正在进行以下专业编程操作，想了解过程细节，请到轨迹页查看'
 const WORKING_KEY = 'dshdeck:working-box-closed'
 const stepEntry = registered.find((entry) => entry.options.key === 'assistant-step')
 const dockEntry = registered.find((entry) => entry.options.id === 'dshdeck-working')
@@ -364,6 +364,21 @@ check(
     !/\bread\b|\bedit\b/.test(textOf(boxLines[1])) &&
     textOf(boxLines[1]).indexOf('/a/b') === -1,
   textOf(boxLines[1]).trim(),
+)
+
+// The title reads in the same blue as the shipped turn-status line and is not
+// emphasised, and the box stands as far from the input as from the conversation.
+const titleRule = /\.dshdeck-working-title\{([^}]*)\}/.exec(source)
+check(
+  'the working-box title is brand blue and not bold',
+  titleRule !== null &&
+    titleRule[1].indexOf('--dsw-static-deepseek-500') !== -1 &&
+    titleRule[1].indexOf('font-weight') === -1,
+  titleRule === null ? 'no rule' : titleRule[1],
+)
+check(
+  'the box keeps the same room below it as the transcript keeps above it',
+  source.indexOf('margin:0 auto calc(16px - var(--dsh-composer-stack-gap, 6px))') !== -1,
 )
 
 const closeButton = box === null ? null : findButton(box)

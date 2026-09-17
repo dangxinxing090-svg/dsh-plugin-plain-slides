@@ -25,6 +25,14 @@ Versioning](https://semver.org/).
 
 ### Changed
 
+- **The working-box title reads in the brand blue and is no longer bold.** It now
+  says `正在进行以下专业编程操作，想了解过程细节，请到轨迹页查看`, in
+  `--dsw-static-deepseek-500` — the same blue the shipped `深度求索中...` status
+  line is built from — rather than in emphasised primary text.
+- **The box keeps the same room below it as the transcript keeps above it.** The
+  composer stack's own gap left it sitting too close to the input. A bottom
+  margin now tops that gap up to the 16px the transcript column keeps above the
+  box, so it stands equally far from the conversation and from the input.
 - **The wording switch carries a rounded frame.** Revealing the full text and
   switching between two wordings are different kinds of control, so the second
   one now looks like one: a visible rounded border, a filled background, and a
