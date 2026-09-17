@@ -380,6 +380,22 @@ check(
   'the box keeps the same room below it as the transcript keeps above it',
   source.indexOf('margin:0 auto calc(16px - var(--dsh-composer-stack-gap, 6px))') !== -1,
 )
+// Room inside the box, on every side and between the two lines. Without the
+// inner gap the title's line box and the step's sit flush against each other.
+const boxRule = /\.dshdeck-working\{([^}]*)\}/.exec(source)
+const linesRule = /\.dshdeck-working-lines\{([^}]*)\}/.exec(source)
+check(
+  'the box pads the text off every border',
+  boxRule !== null &&
+    boxRule[1].indexOf('padding:11px 10px 11px 15px') !== -1 &&
+    boxRule[1].indexOf('align-items:center;gap:10px') !== -1,
+  boxRule === null ? 'no rule' : boxRule[1].slice(0, 120),
+)
+check(
+  'the title and the step are held apart',
+  linesRule !== null && linesRule[1].indexOf('gap:5px') !== -1,
+  linesRule === null ? 'no rule' : linesRule[1],
+)
 
 const closeButton = box === null ? null : findButton(box)
 check(

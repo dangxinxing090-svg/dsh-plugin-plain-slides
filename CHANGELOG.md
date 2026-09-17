@@ -25,6 +25,13 @@ Versioning](https://semver.org/).
 
 ### Changed
 
+- **The working box has room inside it.** Its padding had been tuned down to
+  5px/6px/5px/12px while the box was a single line, which left a two-line box
+  pinched against its own borders. It is now 11px top and bottom — the title's
+  distance from the top border and the step's from the bottom one — 15px on the
+  left and 10px on the right, with 10px between the text and the close control
+  and a 5px gap holding the title and the step apart. Without that inner gap the
+  two line boxes sat flush against each other.
 - **The working-box title reads in the brand blue and is no longer bold.** It now
   says `正在进行以下专业编程操作，想了解过程细节，请到轨迹页查看`, in
   `--dsw-static-deepseek-500` — the same blue the shipped `深度求索中...` status
