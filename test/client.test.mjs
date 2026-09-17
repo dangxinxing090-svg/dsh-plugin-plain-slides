@@ -103,6 +103,11 @@ check(
   nodeEntry !== undefined && nodeEntry.options.name === 'conversation.chat.node',
   nodeEntry && nodeEntry.options.name,
 )
+check(
+  'assistant-step shadows the built-in renderer without colliding',
+  nodeEntry !== undefined && nodeEntry.options.priority === -10,
+  nodeEntry && String(nodeEntry.options.priority),
+)
 check('registers the assistant-actions entry', actionEntry !== undefined && actionEntry.isComponent)
 check(
   'actions entry carries an order',
@@ -136,6 +141,11 @@ check(
   'every process renderer renders nothing',
   nodeEntries.length === HIDDEN_KINDS.length && nodeEntries.every((entry) => entry.component({}) === null),
   'entries=' + nodeEntries.length,
+)
+check(
+  'process renderers shadow built-ins without priority collisions',
+  nodeEntries.every((entry) => entry.options.priority === -10),
+  nodeEntries.map((entry) => entry.options.key + ':' + entry.options.priority).join(', '),
 )
 check(
   'failures stay visible',
