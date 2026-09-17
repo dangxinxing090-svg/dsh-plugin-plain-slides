@@ -405,6 +405,30 @@ check(
 )
 check('an aborted turn still reports its last step', renderStep(abortedB, abortedSnapshot) !== null)
 
+// A settled step inside a turn that is still OPEN must not become a report.
+// Without this gate the step is briefly the turn's last assistant step, so the
+// fallback renders it as a deck — and the next step arriving makes it stop
+// being last, so the deck vanishes. That is one deck flickering per step.
+const openStep = {
+  key: 'o1',
+  kind: 'assistant-step',
+  anchorSeq: 1,
+  location: { kind: 'turn', turn: { turn: 8, status: 'open' } },
+  data: { status: 'settled', step: 1, blocks: [{ kind: 'text', text: '先看一下这个文件。' }], finalNode: { seq: 1 } },
+}
+const openSnapshot = snapshotWith(['o1'], { o1: openStep })
+check('a settled step in an open turn is not a report', renderStep(openStep, openSnapshot) === null)
+
+const closedStep = {
+  ...openStep,
+  key: 'o2',
+  location: { kind: 'turn', turn: { turn: 8, status: 'closed' } },
+}
+check(
+  'the very same step becomes a report once the turn closes',
+  renderStep(closedStep, snapshotWith(['o2'], { o2: closedStep })) !== null,
+)
+
 // ---- tool-name glossary ----------------------------------------------------
 
 const internals = moduleExports.__internals

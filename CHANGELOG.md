@@ -57,6 +57,21 @@ Versioning](https://semver.org/).
 
 ### Fixed
 
+- **The deck no longer appears and vanishes once per step.** A turn that is
+  still open has no report yet, but nothing said so: a settled mid-turn step is
+  briefly the turn's *last* assistant step, so the closing-step fallback below
+  rendered it as a deck. The next step then made it stop being last and the deck
+  disappeared — one deck flickering in and out for every step of the turn. The
+  renderer now requires the turn not to be `open`, which is the same signal the
+  shipped `深度求索中...` turn-status label reads, so the box and the report agree
+  on when the turn is over.
+- **The working box lines up with the conversation.** As a direct child of the
+  composer stack it stretched the full window width, far wider than the messages
+  and the composer card. It now carries the shipped dock formula —
+  `width: calc(100% - 2 * side-clearance - 4 * dock-inset)` with
+  `max-width: calc(card-max-width - 4 * dock-inset)` and `margin: 0 auto` —
+  which resolves to exactly `--dsh-chat-content-width`, the width of the message
+  column.
 - **An aborted or truncated turn no longer reports every narration step.** The
   closing-step test read `closingSeq === null || mySeq === null ? true : …`, so a
   turn that wrote no `turn-tail` — which is exactly what an abort or a truncation
