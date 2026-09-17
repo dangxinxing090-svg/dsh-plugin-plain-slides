@@ -101,11 +101,12 @@ you are not scrolling past the agent's homework to find the answer:
 
 | In the transcript | What you see |
 | --- | --- |
-| While a turn is running | one calm line — `正在处理，有结果了第一时间给您汇报` — instead of streaming narration |
+| While a turn is running | a two-line box just above the composer, under the `深度求索中...` status — the last two steps in plain language instead of streaming tool rows. Close it and it stays closed |
 | When the turn settles | your message, then the deck |
-| Reasoning, tool folds, injected context, compaction markers, retries, the system prompt | nothing at all |
+| Tool rows, reasoning, tool folds, injected context, compaction markers, retries, the system prompt | nothing at all |
 | Failures and truncation (`turn-error`, `turn-max-tokens`) | **kept** — you always learn when something went wrong |
-| Interactive tool cards | **kept** — approvals, plan review and questions still work normally |
+| Approvals, questions, plan review, presented files | **kept** — each renders outside the tool row (the composer, the turn footer, the sidebar plugin panel) |
+| A dynamic plugin's own inline UI (`tool.view.cordis`) | hidden with its row — the one real loss |
 | Everything hidden above | still in the Trajectory view, one click away |
 
 Nothing is deleted. The plugin changes what is *shown by default*, not what is
@@ -328,11 +329,12 @@ dsh plugin --profile web remove dsh-plugin-plain-slides
 
 | 对话里的位置 | 你会看到 |
 | --- | --- |
-| 一轮正在进行时 | 只有一行平静的提示 —— 正在处理，有结果了第一时间给您汇报 —— 而不是不断刷新的自述 |
+| 一轮正在进行时 | composer 上方一个两行框，位于「深度求索中...」下面 —— 显示最近两步的普通话描述，而不是不断刷新的工具行。关掉它就一直是关的 |
 | 一轮结束时 | 你的消息，然后是幻灯片 |
-| 思考过程、工具折叠、注入的上下文、压缩标记、重试、系统提示 | 完全不显示 |
+| 工具行、思考过程、工具折叠、注入的上下文、压缩标记、重试、系统提示 | 完全不显示 |
 | 失败与截断（`turn-error`、`turn-max-tokens`） | **保留** —— 出了问题一定会告诉你 |
-| 需要你动手的卡片 | **保留** —— 授权、计划确认、提问都照常工作 |
+| 授权、提问、计划确认、交付物 | **保留** —— 各自都有工具行之外的落点（composer、轮次页脚、侧栏插件面板） |
+| 动态插件自己的行内界面（`tool.view.cordis`） | 随工具行一起隐藏 —— 这是唯一的真实代价 |
 | 上面被隐藏的内容 | 都在"轨迹"视图里，点一下就能看 |
 
 什么都没删。插件改变的是**默认显示什么**，不是记录什么。
@@ -354,7 +356,7 @@ dsh plugin --profile web remove dsh-plugin-plain-slides
 四个部件：
 
 1. **接管回答的渲染位。** 插件注册进 harness 的"助手消息渲染位"，所以原始 markdown 不再直接渲染——由幻灯片卡取代。
-2. **接管工作过程的渲染位。** 同一个渲染位是按消息种类分键的，插件顺手把思考折叠、注入的上下文、压缩标记、重试和系统提示也认领下来，渲染成空。不能认领的是那些承载交互界面的种类。
+2. **接管工作过程的渲染位。** 同一个渲染位是按消息种类分键的，插件把工具行、思考折叠、注入的上下文、压缩标记、重试和系统提示全部认领下来，渲染成空——**从一轮的第一秒就生效**，不等 harness 自带的过程折叠（那个折叠只在"轮次已关闭且有最终答复"时才启用，恰好在一轮进行中和任务中止后是关着的，而那两个时刻正是过程最不该刷屏的时候）。工作框本身不是渲染位，而是一个 composer 停靠项，因为只有停靠层绘制在整段对话之后，也就是绘制在「深度求索中...」之后。承担交互的渲染位不能这样认领，所以插件改为确认它们的落点在别处：授权与提问在 composer，交付物在轮次页脚，动态插件的批准/拒绝在侧栏面板。
 3. **一次改写调用。** 一轮结束后，插件把那段文字交给你的模型，要求严格按固定行协议输出 HTML 片段：一句结论、若干步过程。
 4. **本地兜底。** 如果调用失败或超时，客户端自己用一个小型 markdown → HTML 转换器把原文切排。排版正确，用词不加工。
 

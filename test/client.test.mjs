@@ -4,6 +4,10 @@
 // then mount the returned plugin against a fake client context and assert it
 // registers the same three contribution points the validated dynamic version
 // did.
+// The browser store the working box keeps its open/closed preference in. The
+// bundle is loaded before `apply` runs, and `apply` reads this store once, so it
+// must exist — and be empty — by the time the fake context is mounted below.
+const stored = new Map()
 globalThis.window = {
   __ModuleLoader__: {
     load(registration) {
@@ -11,6 +15,15 @@ globalThis.window = {
     },
   },
   __PLAIN_SLIDES__: { token: 'test-token' },
+  localStorage: {
+    getItem: (key) => (stored.has(key) ? stored.get(key) : null),
+    setItem: (key, value) => {
+      stored.set(key, String(value))
+    },
+    removeItem: (key) => {
+      stored.delete(key)
+    },
+  },
 }
 globalThis.document = {
   head: { appendChild() {} },
@@ -26,8 +39,17 @@ function check(label, ok, detail) {
   console.log((ok ? 'PASS  ' : 'FAIL  ') + label + (detail === undefined ? '' : '   -> ' + detail))
 }
 
+// React flattens array children and drops null/undefined/boolean ones. The stub
+// must do the same, or a component that hands a mapped array over as a single
+// child reads as one nested list here — which is not what the browser renders.
 const React = {
-  createElement: (type, props, ...children) => ({ type, props, children }),
+  createElement: (type, props, ...children) => ({
+    type,
+    props,
+    children: children
+      .flat(Infinity)
+      .filter((child) => child !== null && child !== undefined && typeof child !== 'boolean'),
+  }),
   useState: (initial) => [initial, () => {}],
   useEffect: () => {},
   useRef: () => ({ current: null }),
@@ -83,14 +105,15 @@ moduleExports.apply(fakeClientCtx)
 
 const injectedKeys = [...new Set(injected)]
 check(
-  'injects exactly the three slot keys',
-  injectedKeys.length === 3 &&
+  'injects exactly the four slot keys',
+  injectedKeys.length === 4 &&
     injectedKeys.includes('conversation.chat.node') &&
+    injectedKeys.includes('conversation.input.dock') &&
     injectedKeys.includes('conversation.chat.assistant-actions') &&
     injectedKeys.includes('shell.overlay'),
   injectedKeys.join(', '),
 )
-check('one injection per registration', injected.length === 10, 'injections=' + injected.length)
+check('one injection per registration', injected.length === 13, 'injections=' + injected.length)
 
 const byKey = (predicate) => registered.find((entry) => predicate(entry.options))
 const nodeEntry = byKey((o) => o.key === 'assistant-step')
@@ -120,9 +143,11 @@ check('all registered entries carry a component', registered.every((entry) => en
 // ---- the working process never reaches the transcript ----------------------
 
 const HIDDEN_KINDS = [
+  'tool-call',
   'turn-process',
   'context',
   'compaction',
+  'manual-compaction',
   'model-retry',
   'unknown',
   'workflow-run',
@@ -171,25 +196,47 @@ check(
 )
 check('the turn footer stays visible', !renderedKeys.includes('turn-tail'))
 check('the user keeps their own voice', !renderedKeys.includes('user') && !renderedKeys.includes('steering'))
+// Taking over `tool-call` hides every `tool.call.toolview` card at once, because
+// a node renderer receives no renderSlot and so cannot delegate back to them.
+// That is only safe while each blocking or interactive surface lives outside a
+// tool row. The four homes, traced in the shipped client, are:
+//   approvals + ask_user_question  -> `conversation.composer`
+//   presented deliverables         -> `conversation.chat.turnTail`
+//   dynamic-plugin approve/decline -> `sidebar.footer.action` (CordisPanel —
+//                                     the inline CordisRunRow never receives
+//                                     onApprove/onDecline)
+// None of them is a `conversation.chat.node` key, so none can be shadowed from
+// here. The two checks below pin both halves of that bargain.
+check('the process takeover includes tool rows', renderedKeys.includes('tool-call'), renderedKeys.join(', '))
 check(
-  'interactive tool cards keep their own renderer',
-  !renderedKeys.includes('tool-call'),
-  renderedKeys.join(', '),
+  'the plugin reaches no slot outside the four it declares',
+  injectedKeys.every(
+    (key) =>
+      key === 'conversation.chat.node' ||
+      key === 'conversation.input.dock' ||
+      key === 'conversation.chat.assistant-actions' ||
+      key === 'shell.overlay',
+  ),
+  injectedKeys.join(', '),
 )
-check('total registrations matches the declared set', registered.length === 10, 'registered=' + registered.length)
+check('total registrations matches the declared set', registered.length === 13, 'registered=' + registered.length)
 
-// ---- running and mid-turn assistant steps ----------------------------------
+// ---- running steps, and the working box in the composer dock ----------------
 
-const WAITING = '正在处理，有结果了第一时间给您汇报'
+const WORKING_TITLE = '正在工作中'
+const WORKING_KEY = 'dshdeck:working-box-closed'
 const stepEntry = registered.find((entry) => entry.options.key === 'assistant-step')
+const dockEntry = registered.find((entry) => entry.options.id === 'dshdeck-working')
 
-function snapshotWith(keys, byKey) {
+function snapshotWith(keys, byKey, openTurn) {
+  const turns = new Map()
+  if (openTurn !== undefined) turns.set(openTurn, { status: 'open', start: { time: 0 } })
   return {
     order: keys,
     nodes: { get: (key) => byKey[key] },
     locations: { getTurn: () => keys },
     navigation: { items: () => [] },
-    timeline: { turns: new Map() },
+    timeline: { turns },
   }
 }
 
@@ -199,6 +246,11 @@ function renderStep(node, snapshot) {
     useChat: (selector) => selector(snapshot),
     useInput: (selector) => selector({ draft: '' }),
   })
+}
+
+/** The dock entry, driven the way the composer seat drives it. */
+function renderDock(snapshot) {
+  return dockEntry.component({ useChat: (selector) => selector(snapshot) })
 }
 
 function textOf(element) {
@@ -213,6 +265,27 @@ function textOf(element) {
   return out
 }
 
+// These renderers hand back an element whose `type` is the component, and the
+// stub React does not invoke component functions — so the tree has to be
+// unfolded by hand before anything inside it can be inspected.
+function resolve(element) {
+  if (element === null || element === undefined) return null
+  if (typeof element === 'function') return resolve(element({}))
+  if (typeof element.type === 'function') return resolve(element.type(element.props || {}))
+  return element
+}
+
+function findButton(element) {
+  if (element === null || element === undefined || typeof element !== 'object') return null
+  if (element.type === 'button') return element
+  const children = element.children || []
+  for (const child of children) {
+    const found = findButton(child)
+    if (found !== null) return found
+  }
+  return null
+}
+
 const firstStep = {
   key: 'k1',
   kind: 'assistant-step',
@@ -221,12 +294,74 @@ const firstStep = {
   data: { status: 'running', step: 1, blocks: [{ kind: 'text', text: 'working' }] },
 }
 const lastStep = { ...firstStep, key: 'k2', anchorSeq: 2 }
-const runningSnapshot = snapshotWith(['k1', 'k2'], { k1: firstStep, k2: lastStep })
+const runningSnapshot = snapshotWith(['k1', 'k2'], { k1: firstStep, k2: lastStep }, 3)
 
-check('an earlier running step shows nothing', renderStep(firstStep, runningSnapshot) === null)
-const waitingTree = textOf(renderStep(lastStep, runningSnapshot))
-check('the last running step shows the placeholder', waitingTree.includes(WAITING), waitingTree.trim().slice(0, 80))
-check('the placeholder is the only thing shown', waitingTree.trim() === WAITING, waitingTree.trim())
+// A running assistant step renders nothing at all. The process readout is a
+// composer-dock entry, because only the dock draws after the conversation — and
+// therefore after the shipped "深度求索中..." turn status the box belongs under.
+check('a running assistant step renders nothing', renderStep(firstStep, runningSnapshot) === null)
+check('the last running step renders nothing either', renderStep(lastStep, runningSnapshot) === null)
+
+const toolCallNode = (key, seq, name, args) => ({
+  key,
+  kind: 'tool-call',
+  anchorSeq: seq,
+  location: { kind: 'turn', turn: { turn: 3 } },
+  data: {
+    root: { kind: 'tool-result', call: { name, argsRaw: args }, callTime: 0, time: 5, isError: false },
+  },
+})
+const readNode = toolCallNode('t1', 11, 'read', '{"file_path":"/a/b/setup.js"}')
+const editNode = toolCallNode('t2', 12, 'edit', '{"file_path":"/a/b/client.js"}')
+const dockSnapshot = snapshotWith(
+  ['k1', 'k2', 't1', 't2'],
+  { k1: firstStep, k2: lastStep, t1: readNode, t2: editNode },
+  3,
+)
+
+const box = resolve(renderDock(dockSnapshot))
+check(
+  'the dock seat draws the working box',
+  box !== null && box.props.className === 'dshdeck-working',
+  box === null ? 'no box' : String(box.props.className),
+)
+const boxColumns = box === null ? [] : box.children || []
+const boxLines = boxColumns.length ? boxColumns[0].children || [] : []
+check('the working box keeps exactly two process lines', boxLines.length === 2, 'lines=' + boxLines.length)
+check(
+  'the lines run oldest to newest',
+  textOf(boxLines[0]).includes('setup.js') && textOf(boxLines[1]).includes('client.js'),
+  textOf(boxLines[0]).trim() + ' || ' + textOf(boxLines[1]).trim(),
+)
+check(
+  'only the newest line is emphasised',
+  boxLines.length === 2 &&
+    boxLines[1].props['data-latest'] === 'true' &&
+    boxLines[0].props['data-latest'] === undefined,
+)
+check('no title row survives', !textOf(box).includes(WORKING_TITLE), textOf(box).trim())
+check(
+  'the box names no raw tool and no directory',
+  !/\bread\b|\bedit\b/.test(textOf(box)) && textOf(box).indexOf('/a/b') === -1,
+  textOf(box).trim(),
+)
+
+const closeButton = box === null ? null : findButton(box)
+check(
+  'the working box carries a working close control',
+  closeButton !== null && typeof closeButton.props.onClick === 'function',
+)
+check(
+  'the box does not outlive the turn',
+  resolve(renderDock(snapshotWith(['k1', 'k2'], { k1: firstStep, k2: lastStep }))) === null,
+)
+closeButton.props.onClick()
+check('closing the box removes it from the dock', resolve(renderDock(dockSnapshot)) === null)
+check(
+  'closing the box is remembered across sessions',
+  globalThis.window.localStorage.getItem(WORKING_KEY) === '1',
+  String(globalThis.window.localStorage.getItem(WORKING_KEY)),
+)
 
 const midStep = {
   key: 'k3',
@@ -245,6 +380,30 @@ check(
   'a settled mid-turn step shows nothing',
   renderStep(midStep, snapshotWith(['k3', 'k4'], { k3: midStep, k4: tailNode })) === null,
 )
+
+// An aborted or truncated turn writes no `turn-tail`, so there is no closing
+// marker to compare against. The renderer must then fail CLOSED: only the last
+// assistant step speaks for the turn. Treating every step as the report is what
+// turned one failure into a pile of narration decks.
+const abortedA = {
+  key: 'a1',
+  kind: 'assistant-step',
+  anchorSeq: 1,
+  location: { kind: 'turn', turn: { turn: 7 } },
+  data: { status: 'settled', step: 1, blocks: [{ kind: 'text', text: '先看一下这个文件' }], finalNode: { seq: 1 } },
+}
+const abortedB = {
+  ...abortedA,
+  key: 'a2',
+  anchorSeq: 2,
+  data: { ...abortedA.data, step: 2, blocks: [{ kind: 'text', text: '看完了，结果如下。' }], finalNode: { seq: 2 } },
+}
+const abortedSnapshot = snapshotWith(['a1', 'a2'], { a1: abortedA, a2: abortedB })
+check(
+  'an aborted turn does not report every narration step',
+  renderStep(abortedA, abortedSnapshot) === null,
+)
+check('an aborted turn still reports its last step', renderStep(abortedB, abortedSnapshot) !== null)
 
 // ---- tool-name glossary ----------------------------------------------------
 
@@ -279,6 +438,64 @@ check(
   'unknown names never leak latin text',
   unknowns.every((name) => !LATIN.test(internals.toolLabel(name))),
   unknowns.map((name) => name + '=' + internals.toolLabel(name)).join('  '),
+)
+
+// ---- the working box's process lines --------------------------------------
+
+const lines = internals.workingLines
+check(
+  'a turn with nothing done yet still reads as plain Chinese',
+  lines({ tools: [] }).length === 1 &&
+    lines({ tools: [] })[0] === '正在理清该怎么做…' &&
+    !LATIN.test(lines({ tools: [] })[0]),
+  lines({ tools: [] }).join(' | '),
+)
+check(
+  'one call yields one line',
+  lines({ tools: [{ name: 'read' }] }).join('|') === labels.read,
+  lines({ tools: [{ name: 'read' }] }).join('|'),
+)
+check(
+  'the lines are the last two calls, oldest first',
+  lines({ tools: [{ name: 'glob' }, { name: 'read' }, { name: 'edit' }] }).join('|') ===
+    labels.read + '|' + labels.edit,
+  lines({ tools: [{ name: 'glob' }, { name: 'read' }, { name: 'edit' }] }).join('|'),
+)
+
+const withTarget = lines({ tools: [{ name: 'read', args: '{"file_path":"/Users/me/proj/setup.js"}' }] })
+check('a file call names the file without its directory', withTarget.join('|') === labels.read + ' · setup.js', withTarget.join('|'))
+
+const viaBash = lines({ tools: [{ name: 'bash', args: '{"command":"rm -rf build"}' }] })
+check(
+  'a command is never shown',
+  viaBash.length === 1 && viaBash[0] === labels.bash && !LATIN.test(viaBash[0]),
+  viaBash.join('|'),
+)
+
+const garbled = lines({ tools: [{ name: 'read', args: '{not json' }] })
+check('unparsable arguments degrade to the plain label', garbled.join('|') === labels.read, garbled.join('|'))
+
+const noTurn = internals.runningTurnNo
+check(
+  'no open turn means nothing to report',
+  noTurn({ timeline: { turns: new Map() } }) === -1 &&
+    noTurn({}) === -1 &&
+    noTurn(snapshotWith(['k1'], { k1: firstStep }, 9)) === 9,
+  String(noTurn(snapshotWith(['k1'], { k1: firstStep }, 9))),
+)
+
+check(
+  'targetHint keeps only a basename',
+  internals.targetHint('{"file_path":"a/b/c/deep.txt"}') === 'deep.txt',
+  internals.targetHint('{"file_path":"a/b/c/deep.txt"}'),
+)
+check(
+  'targetHint refuses a payload it cannot read',
+  internals.targetHint('nope') === '' && internals.targetHint('') === '' && internals.targetHint(undefined) === '',
+)
+check(
+  'baseName leaves a plain name intact',
+  internals.baseName('README.md') === 'README.md' && internals.baseName('') === '',
 )
 
 const model = {
