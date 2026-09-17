@@ -38,8 +38,8 @@ Versioning](https://semver.org/).
   line is built from — rather than in emphasised primary text.
 - **The box keeps the same room below it as the transcript keeps above it.** The
   composer stack's own gap left it sitting too close to the input. A bottom
-  margin now tops that gap up to the 16px the transcript column keeps above the
-  box, so it stands equally far from the conversation and from the input.
+  margin now tops that gap up to 32px — twice the room the transcript column
+  keeps above the box — so it stands clear of the input below it.
 - **The wording switch carries a rounded frame.** Revealing the full text and
   switching between two wordings are different kinds of control, so the second
   one now looks like one: a visible rounded border, a filled background, and a

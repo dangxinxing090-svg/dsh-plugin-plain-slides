@@ -377,8 +377,8 @@ check(
   titleRule === null ? 'no rule' : titleRule[1],
 )
 check(
-  'the box keeps the same room below it as the transcript keeps above it',
-  source.indexOf('margin:0 auto calc(16px - var(--dsh-composer-stack-gap, 6px))') !== -1,
+  'the box stands twice as far from the input as from the transcript',
+  source.indexOf('margin:0 auto calc(32px - var(--dsh-composer-stack-gap, 6px))') !== -1,
 )
 // Room inside the box, on every side and between the two lines. Without the
 // inner gap the title's line box and the step's sit flush against each other.
