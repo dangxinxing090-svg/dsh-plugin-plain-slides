@@ -19,6 +19,10 @@ Versioning](https://semver.org/).
 - **A switch for the working box in the session header.** Closing it is a
   persisted preference, so without this the only recovery was clearing browser
   storage. It is on screen in both states, with `data-on` showing which.
+- **Rewrites are serialised, one in flight at a time.** A reload re-renders every
+  turn in the loaded window at once, and each of them would otherwise ask the
+  model together. In steady state the queue is empty: a kept deck never reaches
+  it, so only the turn that just finished travels through it.
 
 ### Changed
 

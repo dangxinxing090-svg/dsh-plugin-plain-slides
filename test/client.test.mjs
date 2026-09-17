@@ -789,6 +789,30 @@ check(
     internals.rewritePlan('evict', internals.PLAIN_STORE_MAX + 4).state === 'reuse',
 )
 
+// A reload re-renders every turn in the loaded window at once. Without a queue
+// they would all ask the model together, which is the burst this plugin must not
+// create; with it, one is in flight and the rest wait their turn.
+const serialised = []
+const queue = internals.createRewriteQueue()
+for (const name of ['a', 'b', 'c']) {
+  queue.push((done) => {
+    serialised.push(name)
+    done()
+  })
+}
+check('the rewrites run one at a time, in order', serialised.join(',') === 'a,b,c', serialised.join(','))
+
+const held = []
+const heldQueue = internals.createRewriteQueue()
+heldQueue.push(() => {
+  held.push('first')
+})
+heldQueue.push((done) => {
+  held.push('second')
+  done()
+})
+check('a rewrite in flight holds the next one back', held.join(',') === 'first', held.join(','))
+
 const failed = results.filter((r) => !r.ok)
 console.log('\n' + (results.length - failed.length) + '/' + results.length + ' checks passed')
 process.exit(failed.length === 0 ? 0 : 1)
