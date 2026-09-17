@@ -3,7 +3,7 @@
 Notable changes to `dsh-plugin-plain-slides`. Versions follow [Semantic
 Versioning](https://semver.org/).
 
-## Unreleased
+## 0.2.0
 
 ### Added
 
