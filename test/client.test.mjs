@@ -513,6 +513,15 @@ check(
   source.indexOf('stretchIcon') === -1 && source.indexOf('setExpand') === -1,
 )
 
+// A card whose rewrite has not landed has only one wording, so it must not offer
+// a switch. The render above proved the control is absent until a plain deck
+// exists; the positive case follows once `internals` is in scope.
+check(
+  'a card with no plain deck offers no wording switch',
+  headerButtons.every((button) => textOf(button).trim() !== '原版'),
+  headerButtons.map((button) => textOf(button).trim()).join(' | '),
+)
+
 // ---- tool-name glossary ----------------------------------------------------
 
 const internals = moduleExports.__internals
@@ -845,6 +854,32 @@ heldQueue.push((done) => {
   done()
 })
 check('a rewrite in flight holds the next one back', held.join(',') === 'first', held.join(','))
+
+// ---- switching between the two wordings ------------------------------------
+//
+// Once the rewrite has succeeded both decks exist — the plain one and the local
+// one — so the card can move between the two wordings itself. That is a separate
+// control from the raw-text view, which leaves the deck entirely.
+
+internals.writePlainDeck(undefined, 8, [{ kind: 'conclusion', title: '通俗版标题' }])
+const switchedDeck = resolve(renderStep(closedStep, snapshotWith(['o2'], { o2: closedStep })))
+const switchedButtons = switchedDeck === null ? [] : buttonsIn(switchedDeck, [])
+const wordingButton = switchedButtons.find((button) => textOf(button).trim() === '原版')
+check(
+  'a rewritten card offers the original wording',
+  wordingButton !== undefined && wordingButton.props.className === 'dshdeck-icontext',
+  switchedButtons.map((button) => textOf(button).trim()).join(' | '),
+)
+check(
+  'the switch sits beside the flag naming the current wording',
+  switchedDeck !== null && textOf(switchedDeck).indexOf('通俗版') !== -1,
+  switchedDeck === null ? 'no deck' : textOf(switchedDeck).slice(0, 60),
+)
+check(
+  'the wording switch and the raw-text view are two different controls',
+  wordingButton !== undefined && switchedButtons.some((button) => textOf(button).trim() === '完整原文'),
+  switchedButtons.map((button) => textOf(button).trim()).join(' | '),
+)
 
 const failed = results.filter((r) => !r.ok)
 console.log('\n' + (results.length - failed.length) + '/' + results.length + ' checks passed')

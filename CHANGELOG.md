@@ -3,6 +3,21 @@
 Notable changes to `dsh-plugin-plain-slides`. Versions follow [Semantic
 Versioning](https://semver.org/).
 
+## Unreleased
+
+### Added
+
+- **The card can switch between the two wordings itself.** Once the rewrite has
+  succeeded both decks exist — the plain one and the locally rendered one — so
+  the header now names the one you are reading (`· 通俗版`) and carries an `原版`
+  button beside it. Pressing it shows the same slides laid out from your own
+  text: correct layout, unprocessed wording, and no model call, because that deck
+  was built locally all along. The button then reads `通俗版` to come back.
+
+  This is deliberately a different control from `完整原文`, which leaves the deck
+  entirely for the full markdown. A card whose rewrite has not landed has only
+  one wording and therefore offers no switch at all.
+
 ## 0.3.0
 
 ### Added

@@ -95,6 +95,12 @@ The fallback never blanks the card and never shows broken markup.
 A success is kept. Reopen DSH and that turn shows `· 通俗版` straight away — no
 `· 通俗化中…`, and no second call to your model, ever.
 
+Once the rewrite has succeeded the card holds **both wordings**. The header names
+the one you are reading (`· 通俗版`), and the `原版` button beside it switches to
+the same slides laid out from your own text — correct layout, unprocessed wording,
+no model call. The button then reads `通俗版` to come back. That switch is a
+separate control from `完整原文`, which leaves the deck for the full markdown.
+
 ---
 
 ## What the conversation itself shows
@@ -330,6 +336,8 @@ dsh plugin --profile web remove dsh-plugin-plain-slides
 兜底版本不会让卡片空白，也不会显示破损的标记。
 
 **成功一次就会存下来。** 下次重开 DSH，那一轮直接显示 `· 通俗版`——不会先出现 `· 通俗化中…`，也不会再问一次模型。
+
+改写成功之后，卡片同时持有**两种措辞**。卡头写着你正在读的是哪种（`· 通俗版`），旁边的 `原版` 按钮切到同样的幻灯片、但由你自己的原文排版而成——排版正确、用词不加工，**不会再调用模型**；切过去后按钮变成 `通俗版`，点它回来。这个开关和 `完整原文` 是两回事：后者会离开幻灯片、显示完整 markdown。
 
 ---
 
