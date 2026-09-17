@@ -110,7 +110,7 @@ you are not scrolling past the agent's homework to find the answer:
 
 | In the transcript | What you see |
 | --- | --- |
-| While a turn is running | a two-line box just above the composer, under the `深度求索中...` status — a title naming what is happening and pointing at the Trajectory, then the latest step in plain language. Close it and it stays closed; a switch in the session header brings it back, in any state |
+| While a turn is running | a two-line box just above the composer, under the `深度求索中...` status — a title naming what is happening and pointing at the Trajectory, then the latest step in plain language. Close it and it stays closed; a labelled switch in the session header (`显示工作过程` / `隐藏工作过程`) toggles it in any state |
 | When the turn settles | your message, then the deck |
 | Tool rows, reasoning, tool folds, injected context, compaction markers, retries, the system prompt | nothing at all |
 | Failures and truncation (`turn-error`, `turn-max-tokens`) | **kept** — you always learn when something went wrong |
@@ -347,7 +347,7 @@ dsh plugin --profile web remove dsh-plugin-plain-slides
 
 | 对话里的位置 | 你会看到 |
 | --- | --- |
-| 一轮正在进行时 | composer 上方一个两行框，位于「深度求索中...」下面 —— 第一行标题说明正在做什么并指向轨迹页，第二行是最近一步的普通话描述。关掉它就一直是关的；会话标题栏有一个开关，任何状态都能把它打开或关掉 |
+| 一轮正在进行时 | composer 上方一个两行框，位于「深度求索中...」下面 —— 第一行标题说明正在做什么并指向轨迹页，第二行是最近一步的普通话描述。关掉它就一直是关的；会话标题栏有一个带文字的开关（`显示工作过程` / `隐藏工作过程`），任何状态都能切换 |
 | 一轮结束时 | 你的消息，然后是幻灯片 |
 | 工具行、思考过程、工具折叠、注入的上下文、压缩标记、重试、系统提示 | 完全不显示 |
 | 失败与截断（`turn-error`、`turn-max-tokens`） | **保留** —— 出了问题一定会告诉你 |

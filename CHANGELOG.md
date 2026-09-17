@@ -17,6 +17,18 @@ Versioning](https://semver.org/).
   This is deliberately a different control from `完整原文`, which leaves the deck
   entirely for the full markdown. A card whose rewrite has not landed has only
   one wording and therefore offers no switch at all.
+- **The header switch for the working box carries its wording.** It was a bare
+  glyph, which in a row of other bare glyphs gave no clue what it toggled. It now
+  reads `显示工作过程` while the box is closed and `隐藏工作过程` while it is
+  showing — a toggle names what pressing it does — and it is styled as a labelled
+  button rather than a 24px icon.
+
+### Changed
+
+- **The wording switch carries a rounded frame.** Revealing the full text and
+  switching between two wordings are different kinds of control, so the second
+  one now looks like one: a visible rounded border, a filled background, and a
+  brand-coloured border on hover and while showing the original.
 
 ## 0.3.0
 

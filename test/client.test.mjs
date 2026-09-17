@@ -383,6 +383,13 @@ check(
   })(),
   JSON.stringify(resolve(toggleEntry.component({})) && resolve(toggleEntry.component({})).props),
 )
+// A toggle names what pressing it does, so the text follows the state rather than
+// sitting there as a bare glyph.
+check(
+  'the header switch names its action while the box is showing',
+  textOf(resolve(toggleEntry.component({}))).indexOf('隐藏工作过程') !== -1,
+  textOf(resolve(toggleEntry.component({}))).trim(),
+)
 closeButton.props.onClick()
 check('closing the box removes it from the dock', resolve(renderDock(dockSnapshot)) === null)
 check(
@@ -404,6 +411,16 @@ check(
 check(
   'the header switch does not depend on a turn running',
   resolve(toggleEntry.component({})) !== null,
+)
+check(
+  'the header switch names its action once the box is closed',
+  textOf(reopenButton).indexOf('显示工作过程') !== -1,
+  textOf(reopenButton).trim(),
+)
+check(
+  'the header switch is a labelled button, not a bare glyph',
+  String(reopenButton.props.className).indexOf('dshdeck-icontext') !== -1,
+  String(reopenButton.props.className),
 )
 reopenButton.props.onClick()
 check('the reopen control brings the box back', resolve(renderDock(dockSnapshot)) !== null)
@@ -867,8 +884,15 @@ const switchedButtons = switchedDeck === null ? [] : buttonsIn(switchedDeck, [])
 const wordingButton = switchedButtons.find((button) => textOf(button).trim() === '原版')
 check(
   'a rewritten card offers the original wording',
-  wordingButton !== undefined && wordingButton.props.className === 'dshdeck-icontext',
+  wordingButton !== undefined &&
+    String(wordingButton.props.className).indexOf('dshdeck-icontext') !== -1 &&
+    String(wordingButton.props.className).indexOf('dshdeck-outlined') !== -1,
   switchedButtons.map((button) => textOf(button).trim()).join(' | '),
+)
+check(
+  'the wording switch carries a rounded frame, unlike the plain text buttons',
+  source.indexOf('.dshdeck-outlined{border-color:') !== -1 &&
+    source.indexOf('.dshdeck-outlined[data-on="true"]') !== -1,
 )
 check(
   'the switch sits beside the flag naming the current wording',
