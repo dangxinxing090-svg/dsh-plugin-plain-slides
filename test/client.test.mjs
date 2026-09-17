@@ -566,6 +566,58 @@ check(
   wholeDeck.slice(0, 160),
 )
 
+// ---- the rewrite input shape ----------------------------------------------
+//
+// The rewrite is the plugin's whole point: it is what turns a technical reply
+// into plain language. It never worked, because the plumbing handed
+// `slidesFromPlain` a hand-picked `{ prompt }` instead of the model slice it
+// reads. `plainMeta` then read `problems.length` off undefined, the `.catch`
+// swallowed the TypeError, and every card silently fell back to the local
+// renderer. These checks pin both ends: the shape that is produced, and the
+// rewrite actually rendering a deck when driven with it.
+
+const REWRITE = ['TITLE: 改好了', 'RESULT: 文件已经更新。', 'STEP: 修改文件', 'DETAIL: 改了设置。'].join('\n')
+
+const view = internals.plainModelView(model)
+check(
+  'the rewrite input is exactly the five fields it reads',
+  Object.keys(view).sort().join(',') === 'problems,prompt,runMs,toolCount,toolFailures',
+  Object.keys(view).sort().join(','),
+)
+check(
+  'the rewrite input carries the turn it came from',
+  view.prompt === model.prompt && view.runMs === model.runMs && view.toolCount === model.toolCount,
+  JSON.stringify(view),
+)
+
+const rewritten = internals.slidesFromPlain(REWRITE, view)
+check(
+  'the rewrite renders a deck when driven with that shape',
+  rewritten !== null && rewritten.length > 0 && rewritten[0].kind === 'conclusion',
+  rewritten === null ? 'null' : rewritten.map((s) => s.kind + ':' + s.title).join(' | '),
+)
+check(
+  'the rewritten deck carries the real status line, not a placeholder',
+  rewritten !== null &&
+    typeof rewritten[0].meta === 'string' &&
+    rewritten[0].meta.indexOf('有失败的操作') === 0 &&
+    rewritten[0].meta.indexOf('耗时 12.0s') !== -1 &&
+    rewritten[0].meta.indexOf('5 个操作') !== -1,
+  rewritten === null ? 'null' : String(rewritten[0].meta),
+)
+
+// Deliberately pin the strictness: a narrower object is the exact bug, and it
+// must keep failing loudly rather than quietly reporting "正常完成". If someone
+// later softens `plainMeta` with defaults, this check fails and forces them to
+// decide that on purpose.
+let narrowShapeThrows = false
+try {
+  internals.slidesFromPlain(REWRITE, { prompt: '把这件事做完' })
+} catch (error) {
+  narrowShapeThrows = error instanceof TypeError
+}
+check('a bare { prompt } still fails loudly instead of degrading silently', narrowShapeThrows)
+
 const failed = results.filter((r) => !r.ok)
 console.log('\n' + (results.length - failed.length) + '/' + results.length + ' checks passed')
 process.exit(failed.length === 0 ? 0 : 1)

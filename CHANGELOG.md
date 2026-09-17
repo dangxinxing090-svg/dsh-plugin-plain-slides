@@ -57,6 +57,28 @@ Versioning](https://semver.org/).
 
 ### Fixed
 
+- **The plain-language rewrite works for the first time.** It never reached the
+  UI. The plumbing handed `slidesFromPlain` a hand-picked `{ prompt }` instead of
+  the model slice it reads; `plainMeta` then read `problems.length` off
+  `undefined`, the `.catch` swallowed the `TypeError`, the entry's state became
+  `error`, and every card silently fell back to the local renderer. The `· 通俗版`
+  marker this README documents never appeared on any turn, and the per-turn model
+  call was paid and discarded every time.
+
+  The shape is now defined once — `plainModelView`, which selects the five fields
+  the rewrite reads — and built from the whole turn model at the point it is
+  stashed, so a call site can no longer hand over a narrower object by accident.
+  It selects rather than defaults, so a missing field still fails loudly instead
+  of quietly reporting `正常完成`.
+
+  Three checks in `test/client.test.mjs` pin it: the produced key set, the
+  rewrite rendering a deck with a real status line when driven with that shape,
+  and a bare `{ prompt }` still throwing — if someone later softens `plainMeta`
+  with defaults, that last check forces the decision to be made on purpose.
+- **A failed rewrite is no longer silent.** The `.catch` in `plainEntryFor`
+  reported nothing, which is exactly why a rewrite that failed on every single
+  turn looked like a plugin whose wording simply was not very plain. It now logs
+  what went wrong.
 - **The deck no longer appears and vanishes once per step.** A turn that is
   still open has no report yet, but nothing said so: a settled mid-turn step is
   briefly the turn's *last* assistant step, so the closing-step fallback below
