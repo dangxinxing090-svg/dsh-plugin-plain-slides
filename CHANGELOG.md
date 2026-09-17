@@ -57,6 +57,25 @@ Versioning](https://semver.org/).
 
 ### Fixed
 
+- **The hidden process no longer leaves thousands of pixels of blank above the
+  turn-status label.** Rendering a process kind as `null` was never enough: the
+  plugin trusted the harness's `.flowItem:empty{display:none}` to collapse the
+  item, and it never fires. A DOM measurement of one real turn — 501 nodes, taken
+  with a throwaway Cordis client probe — showed every one of those items carrying
+  a single child element, so none is `:empty`. Each therefore kept its box and
+  took the transcript column's 16px sibling margin: 501 × 16px is roughly 8000px
+  of pure gap, growing with every tool call of a turn. That was the blank band
+  above `深度求索中...`.
+
+  The plugin now collapses each hidden kind itself, keyed on
+  `[data-chat-flow-kind]`, and collapses a bare assistant step with
+  `:not(:has(.dshdeck-card))` so that only the one item actually holding a deck
+  keeps its box. `display:none` removes the margin as well as the box.
+
+  A check in `test/client.test.mjs` now fails when a kind is added to the
+  renderer and forgotten in the stylesheet, which is exactly how this survived
+  the move to hiding `tool-call`.
+
 - **The plain-language rewrite works for the first time.** It never reached the
   UI. The plumbing handed `slidesFromPlain` a hand-picked `{ prompt }` instead of
   the model slice it reads; `plainMeta` then read `problems.length` off

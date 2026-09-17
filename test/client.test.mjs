@@ -4,6 +4,7 @@
 // then mount the returned plugin against a fake client context and assert it
 // registers the same three contribution points the validated dynamic version
 // did.
+import { readFileSync } from 'node:fs'
 // The browser store the working box keeps its open/closed preference in. The
 // bundle is loaded before `apply` runs, and `apply` reads this store once, so it
 // must exist — and be empty — by the time the fake context is mounted below.
@@ -166,6 +167,23 @@ check(
   'every process renderer renders nothing',
   nodeEntries.length === HIDDEN_KINDS.length && nodeEntries.every((entry) => entry.component({}) === null),
   'entries=' + nodeEntries.length,
+)
+// Rendering nothing is not enough. The harness's own `.flowItem:empty` collapse
+// never fires for these items — a measured turn showed every one of them
+// carrying a single child element, so each kept its box and took the column's
+// 16px sibling margin. 501 items meant ~8000px of pure gap above the
+// turn-status label. The plugin has to collapse them itself, by kind, and this
+// check is what stops a kind from being added to the renderer and forgotten in
+// the stylesheet.
+const source = readFileSync(new URL('../lib/client.js', import.meta.url), 'utf8')
+const uncollapsed = HIDDEN_KINDS.filter(
+  (kind) => source.indexOf('[data-chat-flow-kind="' + kind + '"]') === -1,
+)
+check('every hidden kind is collapsed by the plugin own CSS', uncollapsed.length === 0, uncollapsed.join(', '))
+check(
+  'a bare assistant step is collapsed while the deck item is kept',
+  source.indexOf('[data-chat-flow-kind="assistant-step"]:not(:has(.dshdeck-card))') !== -1 &&
+    source.indexOf("'dshdeck-card dshdeck-'") !== -1,
 )
 check(
   'process renderers shadow built-ins without priority collisions',
