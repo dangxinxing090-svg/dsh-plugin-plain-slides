@@ -147,6 +147,23 @@ check(
   nodeEntries.every((entry) => entry.options.priority === -10),
   nodeEntries.map((entry) => entry.options.key + ':' + entry.options.priority).join(', '),
 )
+// The bug this guards against, class-wide rather than key-by-key: a permanent
+// client plugin that registers a conversation.chat.node key at the DEFAULT
+// priority competes with the shipped renderer for the same cell at the same
+// priority, and the plugin does not merely lose — it fails to load entirely.
+// Every registration into that slot must therefore declare a shadowing
+// priority. Add a key here and forget it, and this check fails before release.
+const chatNodeRegistrations = registered.filter(
+  (entry) => entry.options.name === 'conversation.chat.node',
+)
+check(
+  'no chat.node registration competes with a built-in at the default priority',
+  chatNodeRegistrations.length > 0 &&
+    chatNodeRegistrations.every(
+      (entry) => typeof entry.options.priority === 'number' && entry.options.priority < 0,
+    ),
+  chatNodeRegistrations.map((entry) => entry.options.key + ':' + String(entry.options.priority)).join(', '),
+)
 check(
   'failures stay visible',
   !renderedKeys.includes('turn-error') && !renderedKeys.includes('turn-max-tokens'),

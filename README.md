@@ -157,6 +157,29 @@ No. The rewrite uses the same model service your conversation already uses. This
 
 ---
 
+## Troubleshooting
+
+**The card never appears, and startup reports a plugin load failure.**
+
+Every registration into `conversation.chat.node` went in at the default slot
+priority, while the harness's own renderer already owned those same keys at that
+same priority. Two registrations competing for one cell at one priority is not a
+tie the slot system resolves: the row fails to load and the plugin contributes
+nothing. That was the v0.1.0 bug — the plugin never mounted on any harness.
+
+Fixed in v0.1.1: every registration now carries `priority: -10`, which wins the
+cell. On v0.1.0, upgrade.
+
+**Is the plugin loaded at all?** A loaded plugin renders every reply as a card
+with a `演示` button on it. If replies are plain markdown, it is not loaded — and
+the harness itself is fine; the failure is confined to this plugin's own row.
+
+**The card renders but the wording is still technical.** The rewrite call failed
+and the local fallback drew the card instead: the `· 通俗版` marker is absent.
+Still correctly laid out, just not simplified.
+
+---
+
 ## Development
 
 No build step — the files in `lib/` are the source.
@@ -179,6 +202,24 @@ To try a local checkout without publishing:
 ```sh
 dsh plugin --profile web add /path/to/dsh-plugin-plain-slides
 ```
+
+### Shadowing a built-in slot
+
+`conversation.chat.node` is a keyed slot whose keys the harness already owns. A
+permanent client plugin that registers one of those keys **at the default
+priority does not merely lose to the shipped renderer — the plugin fails to load
+and contributes nothing**, with a load error at startup. Always declare a
+shadowing priority:
+
+```js
+slots.register({ name: 'conversation.chat.node', key: 'assistant-step', priority: -10 }, View)
+```
+
+A lower number wins the cell. `test/client.test.mjs` enforces this across every
+`conversation.chat.node` registration, so adding a key and forgetting the
+priority fails the suite before release. List slots
+(`conversation.chat.assistant-actions`, `shell.overlay`) are additive and need no
+priority — give them an `id` of your own instead.
 
 MIT licensed.
 
@@ -342,6 +383,20 @@ dsh plugin --profile web remove dsh-plugin-plain-slides
 
 ---
 
+## 排错
+
+**卡片一直不出现，启动时报插件加载失败。**
+
+插件注册 `conversation.chat.node` 时用的是默认优先级，而 harness 自带的渲染器早就占了同样的 key、同样的优先级。同一个格子里两个注册抢位，不是"谁赢"的问题 —— 整条 row 加载失败，插件什么都没贡献。这就是 v0.1.0 的 bug：它在任何 harness 上都装不上。
+
+v0.1.1 已修复：每个注册都带 `priority: -10`，数字更低，赢得格子。你如果装的是 v0.1.0，请升级。
+
+**怎么判断插件到底有没有加载？** 加载成功时，每条回复都是一张卡片，右上角还有一个"演示"按钮。如果回复是普通 markdown，就是没加载 —— 但 harness 本身没事，失败只局限在这个插件自己那条 row 里。
+
+**卡片出来了，但用词还是很专业。** 说明改写调用失败、退回了本地渲染 —— 右上角不会出现 `· 通俗版` 标记。排版仍然正确，只是用词没加工。
+
+---
+
 ## 开发
 
 没有构建步骤——`lib/` 里的文件就是源码。
@@ -364,5 +419,15 @@ npm test
 ```sh
 dsh plugin --profile web add /path/to/dsh-plugin-plain-slides
 ```
+
+### 覆盖 harness 自带的槽位时，必须给优先级
+
+`conversation.chat.node` 是按 key 分格的槽位，而这些 key 早就被 harness 占着。永久客户端插件**用默认优先级注册同一个 key，不是"输给"自带渲染器 —— 是整个插件加载失败、什么都没贡献**，启动时还会报一个加载错误。必须显式声明一个能赢的优先级：
+
+```js
+slots.register({ name: 'conversation.chat.node', key: 'assistant-step', priority: -10 }, View)
+```
+
+数字更低者赢得格子。`test/client.test.mjs` 对**每一个** `conversation.chat.node` 注册都强制检查这一点 —— 以后加了新 key 却忘了优先级，测试会在发布前就失败。列表型槽位（`conversation.chat.assistant-actions`、`shell.overlay`）是可叠加的，不需要优先级，但要用自己的 `id`。
 
 MIT 许可。
