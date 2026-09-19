@@ -1,4 +1,4 @@
-# Mount plain-slides into a DSH profile.
+# Mount brief into a DSH profile.
 #
 # Append this row to the patch layer at:
 #     ~/.dsh/profiles/<profile>/cordis.patch.yml
@@ -9,5 +9,5 @@
 # so you can confirm the row landed before starting a session.
 
 - insert:
-    - id: plain-slides
-      name: 'dsh-plugin-plain-slides'
+    - id: brief
+      name: 'dsh-plugin-brief'

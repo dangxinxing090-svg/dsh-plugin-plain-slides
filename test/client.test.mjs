@@ -60,7 +60,7 @@ const React = {
 await import('../lib/client.js')
 
 check('bundle registers into the module loader', captured !== null)
-check('bundle id is the package name', captured && captured.id === 'dsh-plugin-plain-slides', captured && captured.id)
+check('bundle id is the package name', captured && captured.id === 'dsh-plugin-brief', captured && captured.id)
 
 const required = []
 let moduleExports = null
@@ -119,8 +119,8 @@ check('one injection per registration', injected.length === 14, 'injections=' + 
 
 const byKey = (predicate) => registered.find((entry) => predicate(entry.options))
 const nodeEntry = byKey((o) => o.key === 'assistant-step')
-const actionEntry = byKey((o) => o.id === 'dshdeck-stage')
-const overlayEntry = byKey((o) => o.id === 'dshdeck-stage-overlay')
+const actionEntry = byKey((o) => o.id === 'dshbrief-stage')
+const overlayEntry = byKey((o) => o.id === 'dshbrief-stage-overlay')
 
 check('registers the assistant-step node renderer', nodeEntry !== undefined && nodeEntry.isComponent)
 check(
@@ -183,8 +183,8 @@ const uncollapsed = HIDDEN_KINDS.filter(
 check('every hidden kind is collapsed by the plugin own CSS', uncollapsed.length === 0, uncollapsed.join(', '))
 check(
   'a bare assistant step is collapsed while the deck item is kept',
-  source.indexOf('[data-chat-flow-kind="assistant-step"]:not(:has(.dshdeck-card))') !== -1 &&
-    source.indexOf("'dshdeck-card dshdeck-'") !== -1,
+  source.indexOf('[data-chat-flow-kind="assistant-step"]:not(:has(.dshbrief-card))') !== -1 &&
+    source.indexOf("'dshbrief-card dshbrief-'") !== -1,
 )
 check(
   'process renderers shadow built-ins without priority collisions',
@@ -244,10 +244,10 @@ check('total registrations matches the declared set', registered.length === 14, 
 // ---- running steps, and the working box in the composer dock ----------------
 
 const WORKING_TITLE = '正在进行以下专业编程操作，想了解过程细节，请到轨迹页查看'
-const WORKING_KEY = 'dshdeck:working-box-closed'
+const WORKING_KEY = 'dshbrief:working-box-closed'
 const stepEntry = registered.find((entry) => entry.options.key === 'assistant-step')
-const dockEntry = registered.find((entry) => entry.options.id === 'dshdeck-working')
-const toggleEntry = registered.find((entry) => entry.options.id === 'dshdeck-working-toggle')
+const dockEntry = registered.find((entry) => entry.options.id === 'dshbrief-working')
+const toggleEntry = registered.find((entry) => entry.options.id === 'dshbrief-working-toggle')
 
 function snapshotWith(keys, byKey, openTurn) {
   const turns = new Map()
@@ -343,7 +343,7 @@ const dockSnapshot = snapshotWith(
 const box = resolve(renderDock(dockSnapshot))
 check(
   'the dock seat draws the working box',
-  box !== null && box.props.className === 'dshdeck-working',
+  box !== null && box.props.className === 'dshbrief-working',
   box === null ? 'no box' : String(box.props.className),
 )
 const boxColumns = box === null ? [] : box.children || []
@@ -352,14 +352,14 @@ check('the working box stays exactly two lines', boxLines.length === 2, 'lines='
 check(
   'line one is the title, and it points at the Trajectory',
   boxLines.length === 2 &&
-    boxLines[0].props.className === 'dshdeck-working-title' &&
+    boxLines[0].props.className === 'dshbrief-working-title' &&
     textOf(boxLines[0]).trim() === WORKING_TITLE,
   textOf(boxLines[0]).trim(),
 )
 check(
   'line two is the newest step, with no raw tool or directory',
   boxLines.length === 2 &&
-    boxLines[1].props.className === 'dshdeck-working-line' &&
+    boxLines[1].props.className === 'dshbrief-working-line' &&
     textOf(boxLines[1]).includes('client.js') &&
     !/\bread\b|\bedit\b/.test(textOf(boxLines[1])) &&
     textOf(boxLines[1]).indexOf('/a/b') === -1,
@@ -368,7 +368,7 @@ check(
 
 // The title reads in the same blue as the shipped turn-status line and is not
 // emphasised, and the box stands as far from the input as from the conversation.
-const titleRule = /\.dshdeck-working-title\{([^}]*)\}/.exec(source)
+const titleRule = /\.dshbrief-working-title\{([^}]*)\}/.exec(source)
 check(
   'the working-box title is brand blue and not bold',
   titleRule !== null &&
@@ -382,8 +382,8 @@ check(
 )
 // Room inside the box, on every side and between the two lines. Without the
 // inner gap the title's line box and the step's sit flush against each other.
-const boxRule = /\.dshdeck-working\{([^}]*)\}/.exec(source)
-const linesRule = /\.dshdeck-working-lines\{([^}]*)\}/.exec(source)
+const boxRule = /\.dshbrief-working\{([^}]*)\}/.exec(source)
+const linesRule = /\.dshbrief-working-lines\{([^}]*)\}/.exec(source)
 check(
   'the box pads the text off every border',
   boxRule !== null &&
@@ -450,7 +450,7 @@ check(
 )
 check(
   'the header switch is a labelled button, not a bare glyph',
-  String(reopenButton.props.className).indexOf('dshdeck-icontext') !== -1,
+  String(reopenButton.props.className).indexOf('dshbrief-icontext') !== -1,
   String(reopenButton.props.className),
 )
 reopenButton.props.onClick()
@@ -541,7 +541,7 @@ function buttonsIn(element, found) {
 
 const reportDeck = resolve(renderStep(closedStep, snapshotWith(['o2'], { o2: closedStep })))
 const headerButtons = reportDeck === null ? [] : buttonsIn(reportDeck, [])
-const textButton = headerButtons.find((button) => button.props.className === 'dshdeck-icontext')
+const textButton = headerButtons.find((button) => button.props.className === 'dshbrief-icontext')
 check(
   'the full-text control carries its label, not only an icon',
   textButton !== undefined && textOf(textButton).indexOf('完整原文') !== -1,
@@ -927,14 +927,14 @@ check(
 check(
   'the ask is a labelled, outlined control, not a bare glyph',
   askButton !== undefined &&
-    String(askButton.props.className).indexOf('dshdeck-icontext') !== -1 &&
-    String(askButton.props.className).indexOf('dshdeck-outlined') !== -1,
+    String(askButton.props.className).indexOf('dshbrief-icontext') !== -1 &&
+    String(askButton.props.className).indexOf('dshbrief-outlined') !== -1,
   askButton === undefined ? 'no ask' : String(askButton.props.className),
 )
 check(
   'the ask carries a rounded frame rule, unlike the plain text buttons',
-  source.indexOf('.dshdeck-outlined{border-color:') !== -1 &&
-    source.indexOf('.dshdeck-outlined[data-on="true"]') !== -1,
+  source.indexOf('.dshbrief-outlined{border-color:') !== -1 &&
+    source.indexOf('.dshbrief-outlined[data-on="true"]') !== -1,
 )
 check(
   'the ask and the raw-text view are two different controls',

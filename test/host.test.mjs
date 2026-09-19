@@ -53,7 +53,7 @@ function makeCtx({ llm }) {
   }
 }
 
-const ROUTE = '/api/plain-slides.rewrite'
+const ROUTE = '/api/brief.rewrite'
 
 function post(body) {
   return new Request('http://127.0.0.1:3080' + ROUTE, {
@@ -86,7 +86,7 @@ check(
   routes[0] && routes[0].requestBody === 'buffered',
   routes[0] && routes[0].requestBody,
 )
-check('route registration is fiber-owned', effectLabels.includes('plain-slides: rewrite route'))
+check('route registration is fiber-owned', effectLabels.includes('brief: rewrite route'))
 check(
   'no token or index tap is needed',
   !effectLabels.some((label) => /token|index/i.test(String(label))),
@@ -124,7 +124,7 @@ check(
     seenOptions.messages[0] &&
     seenOptions.messages[0].source &&
     seenOptions.messages[0].source.kind === 'plugin' &&
-    seenOptions.messages[0].source.plugin === 'dsh-plugin-plain-slides' &&
+    seenOptions.messages[0].source.plugin === 'dsh-plugin-brief' &&
     seenOptions.messages[0].source.form === 'instructions',
   JSON.stringify(seenOptions && seenOptions.messages && seenOptions.messages[0].source),
 )

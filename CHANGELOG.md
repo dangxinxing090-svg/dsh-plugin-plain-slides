@@ -1,7 +1,34 @@
 # Changelog
 
-Notable changes to `dsh-plugin-plain-slides`. Versions follow [Semantic
+Notable changes to `dsh-plugin-brief`. Versions follow [Semantic
 Versioning](https://semver.org/).
+
+## Unreleased
+
+### Changed
+
+- **Renamed from `dsh-plugin-plain-slides` to `dsh-plugin-brief`.** The plugin
+  outgrew `plain-slides`: it is no longer only about rewriting wording, and that
+  rewrite is opt-in. What it delivers is a brief — a few slides, conclusion
+  first, with the process kept out of the transcript.
+
+  Every identifier moved with it: the package name, the composition row (id
+  `brief`, name `dsh-plugin-brief`), the `/api/brief.rewrite` route, the module
+  id the browser bundle registers, the `dshbrief:` storage namespace and the
+  `dshbrief-` CSS prefix.
+
+  Two things are deliberately handled rather than left broken:
+
+  - The storage namespace change would have orphaned what a reader already had —
+    the working box's open/closed preference and every kept plain-language deck.
+    `migrateLegacyKeys` moves the old `dshdeck:` keys across once, on first
+    apply, and the legacy names can be dropped one release after this ships.
+  - GitHub redirects the old repository URL, so installs pinned to
+    `github:dangxinxing090-svg/dsh-plugin-plain-slides` keep resolving. New
+    installs should name the repository.
+
+  A local checkout keeps its directory name; only the plugin's own identifiers
+  changed.
 
 ## 0.5.0
 
@@ -73,7 +100,7 @@ Versioning](https://semver.org/).
   without asking the model again.** A rewrite is a pure function of the closing
   step's text and that text cannot change once the turn has closed, so one
   success is enough forever. Decks are kept in `localStorage` under a
-  version-prefixed key (`dshdeck:plain-decks`, `v1:<session>:<turn>`) and capped
+  version-prefixed key (`dshbrief:plain-decks`, `v1:<session>:<turn>`) and capped
   at 120 entries, evicting the least recently written. Until now every reload
   re-rendered every turn and re-asked the model for each one — the exact
   repetition this removes. The store is an optimisation throughout: a blocked,
@@ -145,7 +172,7 @@ Versioning](https://semver.org/).
   conversation, above the shipped todo/goal/queue docks. A running assistant step
   now renders nothing at all.
 - **Closing the box is a preference, not a per-turn choice.** It is stored in
-  `localStorage` under `dshdeck:working-box-closed`, so a session that closed the
+  `localStorage` under `dshbrief:working-box-closed`, so a session that closed the
   box starts closed. Closing it leaves the transcript with nothing but the
   report — the same state as if the process had never rendered.
 
@@ -191,7 +218,7 @@ Versioning](https://semver.org/).
 
   The plugin now collapses each hidden kind itself, keyed on
   `[data-chat-flow-kind]`, and collapses a bare assistant step with
-  `:not(:has(.dshdeck-card))` so that only the one item actually holding a deck
+  `:not(:has(.dshbrief-card))` so that only the one item actually holding a deck
   keeps its box. `display:none` removes the margin as well as the box.
 
   A check in `test/client.test.mjs` now fails when a kind is added to the

@@ -1,6 +1,6 @@
-# plain-slides
+# brief
 
-> A DeepSeek Harness plugin that turns each agent reply into a short slide deck in plain language — for people who use the harness but do not read code.
+> A DeepSeek Harness plugin that turns each agent reply into a brief: a few slides, conclusion first. For people who use the harness but do not read code.
 
 The agent still writes whatever it writes. This plugin gives you **a second way to read it**: every reply is re-shown as a few slides — conclusion first, then a few steps, then any question the agent is waiting on you to answer. The original text is always one click away, and the plainly-worded version is one press away, on the turns you want it.
 
@@ -27,7 +27,7 @@ Nothing is deleted. The `完整原文` button in the card header switches to the
 On a machine with DeepSeek Harness (`dsh`) installed:
 
 ```sh
-dsh plugin --profile web add github:dangxinxing090-svg/dsh-plugin-plain-slides
+dsh plugin --profile web add github:dangxinxing090-svg/dsh-plugin-brief
 ```
 
 This installs straight from this repository, and it works today — the package is not on npm yet.
@@ -35,12 +35,12 @@ This installs straight from this repository, and it works today — the package 
 Once it is published to npm, the shorter name resolves too:
 
 ```sh
-dsh plugin --profile web add dsh-plugin-plain-slides
+dsh plugin --profile web add dsh-plugin-brief
 ```
 
 Restart `dsh`. That is the whole install — the package mounts itself, so there is no config file to edit.
 
-Replace `web` with your profile name (`tui` is the other common one). To pin a release instead of tracking the default branch, append a tag or commit: `github:dangxinxing090-svg/dsh-plugin-plain-slides#v0.1.0`.
+Replace `web` with your profile name (`tui` is the other common one). To pin a release instead of tracking the default branch, append a tag or commit: `github:dangxinxing090-svg/dsh-plugin-brief#v0.1.0`.
 
 <details>
 <summary>Manual install</summary>
@@ -49,15 +49,15 @@ Replace `web` with your profile name (`tui` is the other common one). To pin a r
 
    ```sh
    cd ~/.dsh/profiles/web
-   pnpm add github:dangxinxing090-svg/dsh-plugin-plain-slides
+   pnpm add github:dangxinxing090-svg/dsh-plugin-brief
    ```
 
 2. Append to `cordis.patch.yml` in the same directory:
 
    ```yaml
    - insert:
-       - id: plain-slides
-         name: 'dsh-plugin-plain-slides'
+       - id: brief
+         name: 'dsh-plugin-brief'
    ```
 
 3. Restart `dsh`. `dsh --dump-config` prints the composed tree if you want to confirm the row first.
@@ -68,7 +68,7 @@ Edit `cordis.patch.yml`, never `cordis.yml` — the latter is generated.
 ### Uninstall
 
 ```sh
-dsh plugin --profile web remove dsh-plugin-plain-slides
+dsh plugin --profile web remove dsh-plugin-brief
 ```
 
 ### Publishing your own copy
@@ -79,7 +79,7 @@ Forking this and publishing under your own name? Three things must stay consiste
 2. The `name:` inside `cordis.patch.yml` — that is the row's module specifier, and it must equal the package name, or the loader cannot resolve the row.
 3. The copyright line in `LICENSE`.
 
-The row `id` (`plain-slides`) is only a composition key; rename it freely.
+The row `id` (`brief`) is only a composition key; rename it freely.
 
 ---
 
@@ -203,7 +203,7 @@ the harness itself is fine; the failure is confined to this plugin's own row.
 **The card renders but the wording is still technical.** That is the default: a
 reply is laid out locally and nothing is rewritten until you press `通俗化` on it.
 If you pressed it and the flag went back to `· 原版`, the rewrite failed — open
-the browser console and look for `plain-slides:`, which reports how many attempts
+the browser console and look for `brief:`, which reports how many attempts
 it made and why the last one produced nothing.
 
 ---
@@ -228,7 +228,7 @@ npm test
 To try a local checkout without publishing:
 
 ```sh
-dsh plugin --profile web add /path/to/dsh-plugin-plain-slides
+dsh plugin --profile web add /path/to/dsh-plugin-brief
 ```
 
 ### Shadowing a built-in slot
@@ -254,9 +254,9 @@ MIT licensed.
 ---
 ---
 
-# plain-slides（中文）
+# brief（中文）
 
-> 一个 DeepSeek Harness 插件。把每一轮 AI 的回答重新排成几页大白话幻灯片——给用这个 harness、但不读代码的人。
+> 一个 DeepSeek Harness 插件。把每一轮 AI 的回答变成一份简报：几页幻灯片，先给结论。给用这个 harness、但不读代码的人。
 
 AI 该怎么写还是怎么写。这个插件只是给你**第二种读法**：每轮回答都被重新呈现成几页幻灯片——先给结论，再列几步过程，最后是 AI 在等你拍板的问题。原文永远只差一次点击，**大白话版本则在你想要的那几轮上差一次按下**。
 
@@ -283,7 +283,7 @@ AI 干完活，吐出一大段文字：文件名、代码、术语、括号、�
 在装了 DeepSeek Harness（`dsh`）的机器上执行：
 
 ```sh
-dsh plugin --profile web add github:dangxinxing090-svg/dsh-plugin-plain-slides
+dsh plugin --profile web add github:dangxinxing090-svg/dsh-plugin-brief
 ```
 
 这是直接从本仓库安装，**现在就能用**——这个包还没发布到 npm。
@@ -291,12 +291,12 @@ dsh plugin --profile web add github:dangxinxing090-svg/dsh-plugin-plain-slides
 等它发布到 npm 之后，短名字也成立：
 
 ```sh
-dsh plugin --profile web add dsh-plugin-plain-slides
+dsh plugin --profile web add dsh-plugin-brief
 ```
 
 然后重启 `dsh`。安装就这一步——包会自己挂载自己，不需要改任何配置文件。
 
-把 `web` 换成你实际用的 profile 名（另一个常见的是 `tui`）。想锁定某个版本而不是跟随默认分支，在末尾加上 tag 或 commit：`github:dangxinxing090-svg/dsh-plugin-plain-slides#v0.1.0`。
+把 `web` 换成你实际用的 profile 名（另一个常见的是 `tui`）。想锁定某个版本而不是跟随默认分支，在末尾加上 tag 或 commit：`github:dangxinxing090-svg/dsh-plugin-brief#v0.1.0`。
 
 <details>
 <summary>手动安装</summary>
@@ -305,15 +305,15 @@ dsh plugin --profile web add dsh-plugin-plain-slides
 
    ```sh
    cd ~/.dsh/profiles/web
-   pnpm add github:dangxinxing090-svg/dsh-plugin-plain-slides
+   pnpm add github:dangxinxing090-svg/dsh-plugin-brief
    ```
 
 2. 在同目录的 `cordis.patch.yml` 里追加：
 
    ```yaml
    - insert:
-       - id: plain-slides
-         name: 'dsh-plugin-plain-slides'
+       - id: brief
+         name: 'dsh-plugin-brief'
    ```
 
 3. 重启 `dsh`。想先确认的话，`dsh --dump-config` 会打印组合后的插件树。
@@ -324,7 +324,7 @@ dsh plugin --profile web add dsh-plugin-plain-slides
 ### 卸载
 
 ```sh
-dsh plugin --profile web remove dsh-plugin-plain-slides
+dsh plugin --profile web remove dsh-plugin-brief
 ```
 
 ### 发布你自己的版本
@@ -335,7 +335,7 @@ dsh plugin --profile web remove dsh-plugin-plain-slides
 2. `cordis.patch.yml` 里的 `name:` —— 这是插件行的模块标识符，**必须等于包名**，否则加载器找不到这一行
 3. `LICENSE` 里的版权行
 
-行里的 `id`（`plain-slides`）只是组合键，随便改。
+行里的 `id`（`brief`）只是组合键，随便改。
 
 ---
 
@@ -431,7 +431,7 @@ v0.1.1 已修复：每个注册都带 `priority: -10`，数字更低，赢得格
 
 **怎么判断插件到底有没有加载？** 加载成功时，每条回复都是一张卡片，右上角还有一个"演示"按钮。如果回复是普通 markdown，就是没加载 —— 但 harness 本身没事，失败只局限在这个插件自己那条 row 里。
 
-**卡片出来了，但用词还是很专业。** 这是**默认状态**：回答先在本地排版，你没按 `通俗化` 就不会改写。如果你按了、卡头又退回 `· 原版`，说明改写失败——打开浏览器控制台找 `plain-slides:`，它会报告尝试了几次、以及最后一次为什么没产出内容。
+**卡片出来了，但用词还是很专业。** 这是**默认状态**：回答先在本地排版，你没按 `通俗化` 就不会改写。如果你按了、卡头又退回 `· 原版`，说明改写失败——打开浏览器控制台找 `brief:`，它会报告尝试了几次、以及最后一次为什么没产出内容。
 
 ---
 
@@ -455,7 +455,7 @@ npm test
 想试本地 checkout 而不发布：
 
 ```sh
-dsh plugin --profile web add /path/to/dsh-plugin-plain-slides
+dsh plugin --profile web add /path/to/dsh-plugin-brief
 ```
 
 ### 覆盖 harness 自带的槽位时，必须给优先级
